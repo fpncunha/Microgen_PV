@@ -17,7 +17,7 @@ _FBORPOR(MCLR_DIS & PWRT_OFF);				// Disable MCLR reset pin and turn off the pow
 #define AT_PV 12 // 
 #define AT_VDC 101 
 
-#define NUM_FILTERS 3
+#define NUM_FILTERS 6
 
 
 void configure_pins();
@@ -46,6 +46,12 @@ float f2;
 
 float voltagePV_filtered = 0;
 float currentPV_filtered = 0;
+float voltageDCBUS_filtered = 0;
+
+float voltagePV_filtered250 = 0;
+float currentPV_filtered250 = 0;
+float voltageDCBUS_filtered250 = 0;
+
 float voltagePV_filtered_ant  = 0;
 float currentPV_filtered_ant  = 0;
 
@@ -254,10 +260,10 @@ void txChar(char txChar) {
 
 void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput) {
   print_header(Message1, sizeof(Message1));
-  txFloat(average_currentPhotovoltaic);
+  txFloat( average_voltagePhotovoltaic);
   txChar('V');
   print_header(Message2, sizeof(Message2));
-  txFloat(average_voltagePhotovoltaic);
+  txFloat(average_currentPhotovoltaic);
   txChar('A');
   print_header(Message3, sizeof(Message3));
   txFloat(duty/(2 * 3.015));
@@ -315,30 +321,8 @@ int main()
 
     /////////Initialization//////////////////////////////
 
-    float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
-    float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
-
-    int numberOfSamples = 100;
-    float measure_currentPhotovoltaic[numberOfSamples], average_currentPhotovoltaic;
-    float measure_voltagePhotovoltaic[numberOfSamples], average_voltagePhotovoltaic;
-    float measure_voltageOutput[numberOfSamples], average_voltageOutput;
-    int i = 0;
-    int j = 0, y, system = 0;
-    int flag=0;
-    int aux_i = 0;
-   
-
-    float dI, dV, Iold, Vold;
-    float dutyMax = 0.9;
-    float dutyMin = 0.4;
-
-    float dutyStep = 0.002;      
-    float deltaV = 0.01;
-    float deltaI = 0.01;
-    float deltaG = 0.01;
-
-    float auxG, auxDG, G;
-
+    int system = 0, aux_i = 0, y = 0;
+    
     //float T_mppt=0.001;        // in seconds
     float samplingTime = 0.001;
     long  clockFrequency = 30000000;    // Hz
@@ -358,33 +342,9 @@ int main()
 
 while(1) {
   
-      //voltageOutput = v2*115.2;
-
-      // each measure contains 100 samples
-      measure_currentPhotovoltaic[i] = currentPhotovoltaic;
-      measure_voltagePhotovoltaic[i] = voltagePhotovoltaic;
-      measure_voltageOutput[i] = voltageOutput;
-      //    __delay32(samplingTime * clockFrequency);
-      i++;
-
-    if(i == numberOfSamples) {
-        average_currentPhotovoltaic = 0; average_voltagePhotovoltaic = 0; average_voltageOutput = 0;
-        for(i = 0;i < numberOfSamples; i++) {
-            average_currentPhotovoltaic = average_currentPhotovoltaic + measure_currentPhotovoltaic[i];
-            average_voltagePhotovoltaic = average_voltagePhotovoltaic + measure_voltagePhotovoltaic[i];
-            average_voltageOutput = average_voltageOutput + measure_voltageOutput[i];
-        }
-        average_currentPhotovoltaic = average_currentPhotovoltaic/numberOfSamples;
-        average_voltagePhotovoltaic = average_voltagePhotovoltaic/numberOfSamples;
-        average_voltageOutput = average_voltageOutput/numberOfSamples;
-        i = 0;
-             //end media
-
-        
-			  //Sets system's Mode
-      
-           // if (U2STAbits.URXDA == 1)           //Checks if received a caracter
-            //{
+    //    __delay32(samplingTime * clockFrequency);
+           
+    if (U2STAbits.URXDA == 1)  {         //Checks if received a character
         y = U2RXREG;
         if(y == '1' ) {
             if(system == 0 ) {
@@ -394,21 +354,20 @@ while(1) {
                 _LATD0 = 1;		//reset
                 __delay32(0.1 * clockFrequency);
                 _LATD0 = 0;
-                }
             }
+        }
         if(y == '0') {
             system = 0;
             print_header(Message8, sizeof(Message8));
         }
-        y='r';
-        if(y == 'r' || y == 'R')
-        print_data(average_voltagePhotovoltaic,voltagePV_filtered, PDC1,average_voltageOutput);
+        if(y == 'r' || y == 'R') {
+            print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
+            //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);
         }
     }
-    return 0;
-} // end Main
-
-
+  }
+ return 0;  
+}
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 {
     
@@ -420,10 +379,11 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
  
       // Toggle RD1
       _LATD1 = 1 - _LATD1;
-      //LATBbits.LATB8 = 1;
-    
-
+      LATBbits.LATB8 = 1;
       
+      /**
+       *****  ACQUISITION ******
+       */
       analog_currentPhotovoltaic = readAnalogChannel(0);
       v0 = (analog_currentPhotovoltaic*AD_FS)/AD16Bit_FS;  // analogic value [0 4]
       currentPhotovoltaic = (v0*HY15P_IN)/HY15P_VN; 
@@ -439,22 +399,41 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
       v2 = (analog_voltageOutput*AD_FS)/AD16Bit_FS;  //analogic value [0 5]
       voltageOutput = v2*AT_VDC; 
 
-      voltagePV_filtered= filter_10hz(voltageOutput, 0);
+      voltagePV_filtered = filter_10hz(voltagePhotovoltaic, 0);
       currentPV_filtered = filter_10hz(currentPhotovoltaic, 1);
+      voltageDCBUS_filtered = filter_10hz(voltageOutput, 2);
       
-      mppt_counter ++;
+      /**
+       ***** PROTECTIONS: *****
+       * 250HZ filter + over voltage + over current detection
+       */
+      voltagePV_filtered250 = filter_250hz(voltagePhotovoltaic, 3);
+      currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
+      voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
+      
+      
+      /**
+       ***** MPPT *****
+       */
+      
+
       
       if(mppt_counter >= 100)
       {
-          LATBbits.LATB8 = 1;
+          //LATBbits.LATB8 = 1;
+          __delay32(10000);  //random delay
+          
           run_mppt(voltagePV_filtered, voltagePV_filtered_ant , currentPV_filtered, currentPV_filtered_ant );
           mppt_counter = 0;
           voltagePV_filtered_ant  = voltagePV_filtered;
           currentPV_filtered_ant  = currentPV_filtered;
-          LATBbits.LATB8 = 0;
+          //LATBbits.LATB8 = 0;
+      }
+      else {
+          mppt_counter ++;
       }
             
- 
+ LATBbits.LATB8 = 0;
       
     
 }

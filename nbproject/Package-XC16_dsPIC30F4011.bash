@@ -10,9 +10,9 @@ CND_CONF=XC16_dsPIC30F4011
 CND_DISTDIR=dist
 TMPDIR=build/${CND_CONF}/${IMAGE_TYPE}/tmp-packaging
 TMPDIRNAME=tmp-packaging
-OUTPUT_PATH=dist/${CND_CONF}/${IMAGE_TYPE}/PV_draft.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
-OUTPUT_BASENAME=PV_draft.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
-PACKAGE_TOP_DIR=pvdraft.x/
+OUTPUT_PATH=dist/${CND_CONF}/${IMAGE_TYPE}/Microgen_PV.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+OUTPUT_BASENAME=Microgen_PV.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+PACKAGE_TOP_DIR=microgenpv/
 
 # Functions
 function checkReturnCode
@@ -57,15 +57,15 @@ mkdir -p ${TMPDIR}
 
 # Copy files and create directories and links
 cd "${TOP}"
-makeDirectory ${TMPDIR}/pvdraft.x/bin
+makeDirectory ${TMPDIR}/microgenpv/bin
 copyFileToTmpDir "${OUTPUT_PATH}" "${TMPDIR}/${PACKAGE_TOP_DIR}bin/${OUTPUT_BASENAME}" 0755
 
 
 # Generate tar file
 cd "${TOP}"
-rm -f ${CND_DISTDIR}/${CND_CONF}/package/pvdraft.x.tar
+rm -f ${CND_DISTDIR}/${CND_CONF}/package/microgenpv.tar
 cd ${TMPDIR}
-tar -vcf ../../../../${CND_DISTDIR}/${CND_CONF}/package/pvdraft.x.tar *
+tar -vcf ../../../../${CND_DISTDIR}/${CND_CONF}/package/microgenpv.tar *
 checkReturnCode
 
 # Cleanup

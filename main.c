@@ -20,9 +20,7 @@ _FBORPOR(MCLR_DIS & PWRT_OFF);				// Disable MCLR reset pin and turn off the pow
 #define NUM_FILTERS 3
 
 
-int16_t value_ant1[NUM_FILTERS] = 0;
-int16_t value_filt_ant1[NUM_FILTERS] = 0;
-int16_t value_filt[NUM_FILTERS] = 0;
+
 
 void configure_pins();
 void set_duty_cycle(float duty);
@@ -33,8 +31,12 @@ void txChar(char caracter);
 unsigned int number(unsigned int y,unsigned int operator);
 void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput);
 void print_header(char *msg, int count);
-int16_t filter_200hz(int16_t input_value, uint8_t filter_number);
+int filter_200hz(int input_value, int filter_number);
 
+
+int value_ant1[NUM_FILTERS];
+int value_filt_ant1[NUM_FILTERS];
+int value_filt[NUM_FILTERS];
 
 unsigned int x;
 int d1,d2;
@@ -194,7 +196,7 @@ void print_header(char *msg, int count)
         }
 }
 
-int16_t filter_200hz(int16_t input_value, uint8_t filter_number) {
+int filter_200hz(int input_value, int filter_number) {
 	//filtro a 200Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
 	//values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 	

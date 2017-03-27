@@ -56,6 +56,7 @@ int n;
 
 
 
+void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void);
 
 
 void set_duty_cycle(float duty)  //Delays PWM's 180
@@ -68,10 +69,21 @@ void configure_pins()
 {
         //configure Port D and B
         LATD = 0;						// output equals 0
-        TRISD = 0b11111110;				// RD0 output RD1 to RD8 input
+        TRISD = 0b11111100;				// RD0 output RD1 to RD8 input
         TRISB = 0x01FF;					// Ports B are inputs
         TRISBbits.TRISB8=0; //pin B9 is configured as output
 
+        
+        // Configure timer1
+        T1CON = 0;            // Clear Timer 1 configuration
+        T1CONbits.TCKPS = 1;  // Set timer 1 prescaler (0=1:1, 1=1:8, 2=1:64, 3=1:256)
+        PR1 = 3685;          // Set Timer 1 period (max value is 65535) 16bit
+        _T1IP = 1;            // Set Timer 1 interrupt priority
+        _T1IF = 0;            // Clear Timer 1 interrupt flag
+        _T1IE = 1;            // Enable Timer 1 interrupt
+        T1CONbits.TON = 1;    // Turn on Timer 1
+        
+        
         //configure ADC
         ADPCFG = 0xFF00;				// Lowest 8 PORTB pins are analog inputs
         ADCON1 = 0x0000;				// Manually clear SAMP to end sampling, start
@@ -275,28 +287,6 @@ int main()
 
 while(1) {
   
-    //  { __delay32( (unsigned long) (((unsigned long long) d)*(FCY)/1000ULL)); }
-     __delay32(samplingTime * clockFrequency);  // argument = clock cycles
-     LATBbits.LATB8=~LATBbits.LATB8; 
-      // reads the current from photovoltaic panel
-     analog_currentPhotovoltaic = readAnalogChannel(0);
-      v0 = (analog_currentPhotovoltaic*AD_FS)/AD16Bit_FS;  // analogic value [0 4]
-      currentPhotovoltaic = (v0*HY15P_IN)/HY15P_VN; 
-
-      // reads the voltage from de photovoltaic panel
-      analog_voltagePhotovoltaic = readAnalogChannel(1);
-      v1 = (analog_voltagePhotovoltaic*AD_FS)/AD16Bit_FS;  // analogic value [0 4,5]
-      voltagePhotovoltaic = v1*AT_PV;
-      //voltagePhotovoltaic=v1*11.066;
-
-      // reads the output voltage
-      analog_voltageOutput = readAnalogChannel(2);
-      v2 = (analog_voltageOutput*AD_FS)/AD16Bit_FS;  //analogic value [0 5]
-      voltageOutput = v2*AT_VDC; 
-
-      voltage_filtered = filter_250hz(voltageOutput,0);
-
-
       //voltageOutput = v2*115.2;
 
       // each measure contains 100 samples
@@ -405,5 +395,53 @@ while(1) {
 } // end Main
 
 
+void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
+{
+    
+    float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
+    float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput, voltage_filtered;
+    
+    
+      // Clear Timer 1 interrupt flag
+      _T1IF = 0;
+ 
+      // Toggle RD1
+      _LATD1 = 1 - _LATD1;
+      LATBbits.LATB8 = 1;
+    
+      int mppt_counter = 0;
+      
+      analog_currentPhotovoltaic = readAnalogChannel(0);
+      v0 = (analog_currentPhotovoltaic*AD_FS)/AD16Bit_FS;  // analogic value [0 4]
+      currentPhotovoltaic = (v0*HY15P_IN)/HY15P_VN; 
+
+      // reads the voltage from de photovoltaic panel
+      analog_voltagePhotovoltaic = readAnalogChannel(1);
+      v1 = (analog_voltagePhotovoltaic*AD_FS)/AD16Bit_FS;  // analogic value [0 4,5]
+      voltagePhotovoltaic = v1*AT_PV;
+      //voltagePhotovoltaic=v1*11.066;
+
+      // reads the output voltage
+      analog_voltageOutput = readAnalogChannel(2);
+      v2 = (analog_voltageOutput*AD_FS)/AD16Bit_FS;  //analogic value [0 5]
+      voltageOutput = v2*AT_VDC; 
+
+      voltage_filtered = filter_250hz(voltageOutput,0);
+      
+      
+      counter ++;
+      
+      if(counter==4)
+      {
+          
+          
+          
+      }
+      
+            
+      LATBbits.LATB8 = 0;
+        
+    
+}
 
 

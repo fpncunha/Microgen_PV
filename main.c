@@ -31,12 +31,12 @@ void txChar(char caracter);
 unsigned int number(unsigned int y,unsigned int operator);
 void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput);
 void print_header(char *msg, int count);
-int filter_200hz(int input_value, int filter_number);
+float filter_200hz(float input_value, int filter_number);
 
 
-int value_ant1[NUM_FILTERS];
-int value_filt_ant1[NUM_FILTERS];
-int value_filt[NUM_FILTERS];
+float value_ant1[NUM_FILTERS];
+float value_filt_ant1[NUM_FILTERS];
+float value_filt[NUM_FILTERS];
 
 unsigned int x;
 int d1,d2;
@@ -196,7 +196,7 @@ void print_header(char *msg, int count)
         }
 }
 
-int filter_200hz(int input_value, int filter_number) {
+float filter_200hz(float input_value, int filter_number) {
 	//filtro a 200Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
 	//values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 	
@@ -229,6 +229,8 @@ float measure_voltageOutput[numberOfSamples], average_voltageOutput;
 int i = 0;
 int j = 0, y, system = 0;
 int flag=0;
+int aux_i = 0;
+float voltage_filtered = 0;
 
 float dI, dV, Iold, Vold;
 float duty = 0.5;     // Duty Initialization
@@ -249,6 +251,15 @@ long  clockFrequency = 30000000;    // Hz
 	  
      configure_pins();
      set_duty_cycle(0);
+     
+     
+     // filters' initialization
+     for (aux_i = 0 ;  aux_i < NUM_FILTERS ; aux_i++)
+     {
+             value_ant1[aux_i] = 0;
+             value_filt_ant1[aux_i] = 0;
+             value_filt[aux_i] = 0;
+     }
 	 
     while(1)
     {
@@ -271,6 +282,8 @@ long  clockFrequency = 30000000;    // Hz
       analog_voltageOutput = readAnalogChannel(2);
       v2 = (analog_voltageOutput*AD_FS)/AD16Bit_FS;  //analogic value [0 5]
       voltageOutput = v2*AT_VDC; 
+      
+      voltage_filtered = filter_200hz(voltageOutput,0);
       
       	  
       //voltageOutput = v2*115.2;
@@ -323,7 +336,7 @@ long  clockFrequency = 30000000;    // Hz
                     
                     y='r';
                     if(y == 'r' || y == 'R')
-                        print_data(average_voltagePhotovoltaic,average_currentPhotovoltaic, PDC1,average_voltageOutput);
+                        print_data(average_voltagePhotovoltaic,voltage_filtered, PDC1,average_voltageOutput);
 
        //     }
 

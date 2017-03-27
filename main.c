@@ -20,8 +20,6 @@ _FBORPOR(MCLR_DIS & PWRT_OFF);				// Disable MCLR reset pin and turn off the pow
 #define NUM_FILTERS 3
 
 
-
-
 void configure_pins();
 void set_duty_cycle(float duty);
 unsigned intreadAnalogChannel(int n);
@@ -33,6 +31,8 @@ void print_data(float average_voltagePhotovoltaic, float average_currentPhotovol
 void print_header(char *msg, int count);
 float filter_250hz(float input_value, int filter_number);
 float filter_10hz(float input_value, int filter_number);
+void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant);
+
 
 float value_ant1[NUM_FILTERS];
 float value_filt_ant1[NUM_FILTERS];
@@ -40,8 +40,15 @@ float value_filt[NUM_FILTERS];
 
 unsigned int x;
 int d1,d2;
-
+float duty = 0.5;     // Duty Initialization
+int mppt_counter = 0;
 float f2;
+
+float voltagePV_filtered = 0;
+float currentPV_filtered = 0;
+float voltagePV_filtered_ant  = 0;
+float currentPV_filtered_ant  = 0;
+
 char Message0[]="\n 1-Turn on System";
 char MessageA[]="\n 0-Turn off System";
 char Message1[] = "\n V_PV=";
@@ -55,8 +62,73 @@ char MessageX[] = "\nDUTY";
 int n;
 
 
-
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void);
+
+void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant ){
+    
+    float dI, dV, Iold, Vold;
+    float dutyMax = 0.9;
+    float dutyMin = 0.4;
+
+    float dutyStep = 0.002;      
+    float deltaV = 0.01;
+    float deltaI = 0.01;
+    float deltaG = 0.01;
+
+    float auxG, auxDG, G;
+
+    //float T_mppt=0.001;        // in seconds
+    float samplingTime = 0.001;
+    long  clockFrequency = 30000000; 
+    
+    
+        
+            dI = ifilt - ifilt_ant;
+            dV = vfilt - vfilt_ant;
+            if ((dV <= deltaV) && (dV >= - deltaV)) {
+                if ((dI <= deltaI) && (dI >= - deltaI)) {
+                    //do nothing
+                }
+                else {
+                    if (dI > deltaI) {
+                        duty -= dutyStep;
+                    }
+                    else {
+                        duty += dutyStep;
+                    }
+                }
+            }
+            else {
+                auxG = ifilt/vfilt;
+                auxDG = dI/dV;
+                G = auxG+auxDG;
+                if((G <= deltaG) && (G >= - deltaG)) {
+                    //do nothing
+                }
+                else {
+                    if(G > deltaG) {
+                        duty -= dutyStep;
+                    }
+                    else {
+                        duty += dutyStep;
+                    }
+                }
+            }
+            //Saturates PWM between 0,4 and 0,9
+            if(duty >= dutyMax) {
+                duty = dutyMax;
+            }
+            if(duty <= dutyMin) {
+                duty = dutyMin;
+            }
+
+            //Iold = ifilt;
+            //Vold = vfilt;
+
+            set_duty_cycle(duty);  // update duty
+            //print_data(average_currentPhotov
+}
+
 
 
 void set_duty_cycle(float duty)  //Delays PWM's 180
@@ -254,10 +326,9 @@ int main()
     int j = 0, y, system = 0;
     int flag=0;
     int aux_i = 0;
-    float voltage_filtered = 0;
+   
 
     float dI, dV, Iold, Vold;
-    float duty = 0.5;     // Duty Initialization
     float dutyMax = 0.9;
     float dutyMin = 0.4;
 
@@ -309,7 +380,7 @@ while(1) {
         i = 0;
              //end media
 
-
+        
 			  //Sets system's Mode
       
            // if (U2STAbits.URXDA == 1)           //Checks if received a caracter
@@ -331,66 +402,9 @@ while(1) {
         }
         y='r';
         if(y == 'r' || y == 'R')
-        print_data(average_voltagePhotovoltaic,voltage_filtered, PDC1,average_voltageOutput);
-       //     }
-
-//////////    MPPT INCREMENTAL CONDUCTANCE  ////////////////////////
-
-        if(system == 0) {
-            set_duty_cycle(0);
-            _LATD2 = 0;
-        }
-
-        if(system == 1) {
-            dI = average_currentPhotovoltaic - Iold;
-            dV = average_voltagePhotovoltaic - Vold;
-            if ((dV <= deltaV) && (dV >= - deltaV)) {
-                if ((dI <= deltaI) && (dI >= - deltaI)) {
-                    //do nothing
-                }
-                else {
-                    if (dI > deltaI) {
-                        duty -= dutyStep;
-                    }
-                    else {
-                        duty += dutyStep;
-                    }
-                }
-            }
-            else {
-                auxG = average_currentPhotovoltaic/average_voltagePhotovoltaic;
-                auxDG = dI/dV;
-                G = auxG+auxDG;
-                if((G <= deltaG) && (G >= - deltaG)) {
-                    //do nothing
-                }
-                else {
-                    if(G > deltaG) {
-                        duty -= dutyStep;
-                    }
-                    else {
-                        duty += dutyStep;
-                    }
-                }
-            }
-            //Saturates PWM between 0,4 and 0,9
-            if(duty >= dutyMax) {
-                duty = dutyMax;
-            }
-            if(duty <= dutyMin) {
-                duty = dutyMin;
-            }
-
-            Iold = average_currentPhotovoltaic;
-            Vold = average_voltagePhotovoltaic;
-
-            set_duty_cycle(duty);  // update duty
-            //print_data(average_currentPhotovoltaic,average_voltagePhotovoltaic,PDC1,average_voltageOutput);
-
-            } //end MPPT
+        print_data(average_voltagePhotovoltaic,voltagePV_filtered, PDC1,average_voltageOutput);
         }
     }
-
     return 0;
 } // end Main
 
@@ -399,17 +413,16 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 {
     
     float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
-    float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput, voltage_filtered;
-    
-    
+    float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
+        
       // Clear Timer 1 interrupt flag
       _T1IF = 0;
  
       // Toggle RD1
       _LATD1 = 1 - _LATD1;
-      LATBbits.LATB8 = 1;
+      //LATBbits.LATB8 = 1;
     
-      int mppt_counter = 0;
+
       
       analog_currentPhotovoltaic = readAnalogChannel(0);
       v0 = (analog_currentPhotovoltaic*AD_FS)/AD16Bit_FS;  // analogic value [0 4]
@@ -426,21 +439,23 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
       v2 = (analog_voltageOutput*AD_FS)/AD16Bit_FS;  //analogic value [0 5]
       voltageOutput = v2*AT_VDC; 
 
-      voltage_filtered = filter_250hz(voltageOutput,0);
+      voltagePV_filtered= filter_10hz(voltageOutput, 0);
+      currentPV_filtered = filter_10hz(currentPhotovoltaic, 1);
       
+      mppt_counter ++;
       
-      counter ++;
-      
-      if(counter==4)
+      if(mppt_counter >= 100)
       {
-          
-          
-          
+          LATBbits.LATB8 = 1;
+          run_mppt(voltagePV_filtered, voltagePV_filtered_ant , currentPV_filtered, currentPV_filtered_ant );
+          mppt_counter = 0;
+          voltagePV_filtered_ant  = voltagePV_filtered;
+          currentPV_filtered_ant  = currentPV_filtered;
+          LATBbits.LATB8 = 0;
       }
-      
             
-      LATBbits.LATB8 = 0;
-        
+ 
+      
     
 }
 

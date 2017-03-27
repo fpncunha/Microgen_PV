@@ -97,12 +97,12 @@ Program Memory  [Origin = 0x100, Length = 0x7f00]
 section                    address   length (PC units)   length (bytes) (dec)
 -------                    -------   -----------------   --------------------
 .text                        0x100               0x48a           0x6cf  (1743)
-.text                        0x58a               0x790           0xb58  (2904)
-.dinit                       0xd1a                0x68            0x9c  (156)
-.init.delay32                0xd82                0x1c            0x2a  (42)
-.text                        0xd9e                 0xc            0x12  (18)
+.text                        0x58a               0x7f2           0xbeb  (3051)
+.dinit                       0xd7c                0x68            0x9c  (156)
+.init.delay32                0xde4                0x1c            0x2a  (42)
+.text                        0xe00                 0xc            0x12  (18)
 
-                 Total program memory used (bytes):         0x12ff  (4863) 9%
+                 Total program memory used (bytes):         0x1392  (5010) 10%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x7c]
@@ -205,11 +205,11 @@ External Symbols in Program Memory (by address):
                   0x0001fe                  ___subsf3
                   0x000200                  ___addsf3
                   0x0002ba                  ___divsf3
+                  0x00033e                  ___eqsf2
                   0x00033e                  ___ltsf2
                   0x00033e                  ___lesf2
-                  0x00033e                  ___eqsf2
-                  0x000342                  ___gesf2
                   0x000342                  ___gtsf2
+                  0x000342                  ___gesf2
                   0x000346                  ___fixsfsi
                   0x000388                  ___fixunssfsi
                   0x0003be                  ___floatsisf
@@ -233,16 +233,17 @@ External Symbols in Program Memory (by address):
                   0x00075e                  _txChar
                   0x000776                  _print_data
                   0x0007ce                  _print_header
-                  0x000802                  _filter_200hz
-                  0x00087c                  _main
-                  0x000d82                  ___delay32
-                  0x000d9e                  _ConfigureOscillator
-                  0x000da4                  _InitApp
+                  0x000802                  _filter_250hz
+                  0x000864                  _filter_10hz
+                  0x0008de                  _main
+                  0x000de4                  ___delay32
+                  0x000e00                  _ConfigureOscillator
+                  0x000e06                  _InitApp
 
 External Symbols in Program Memory (by name):
 
-                  0x000d9e                  _ConfigureOscillator
-                  0x000da4                  _InitApp
+                  0x000e00                  _ConfigureOscillator
+                  0x000e06                  _InitApp
                   0x0001ce                  __AddressError
                   0x0001e6                  __AltAddressError
                   0x0001f2                  __AltMathError
@@ -253,7 +254,7 @@ External Symbols in Program Memory (by name):
                   0x0001c8                  __OscillatorFail
                   0x0001d4                  __StackError
                   0x000200                  ___addsf3
-                  0x000d82                  ___delay32
+                  0x000de4                  ___delay32
                   0x0002ba                  ___divsf3
                   0x00033e                  ___eqsf2
                   0x000346                  ___fixsfsi
@@ -280,8 +281,9 @@ External Symbols in Program Memory (by name):
                   0x00013c                  __psv_init
                   0x000100                  __resetPRI
                   0x0005b4                  _configure_pins
-                  0x000802                  _filter_200hz
-                  0x00087c                  _main
+                  0x000864                  _filter_10hz
+                  0x000802                  _filter_250hz
+                  0x0008de                  _main
                   0x00072c                  _number
                   0x000776                  _print_data
                   0x0007ce                  _print_header
@@ -480,45 +482,45 @@ userdata
 .comment
  *(.comment)
 
-.debug_info       0x000000       0x1bf0
+.debug_info       0x000000       0x1c23
  *(.debug_info)
  .debug_info      0x000000         0xba build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_info      0x0000ba        0x114 build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_info      0x0001ce       0x14b6 build/XC16_dsPIC30F4011/production/main.o
- .debug_info      0x001684        0x133 build/XC16_dsPIC30F4011/production/system.o
- .debug_info      0x0017b7        0x314 build/XC16_dsPIC30F4011/production/traps.o
- .debug_info      0x001acb        0x125 build/XC16_dsPIC30F4011/production/user.o
+ .debug_info      0x0001ce       0x14e9 build/XC16_dsPIC30F4011/production/main.o
+ .debug_info      0x0016b7        0x133 build/XC16_dsPIC30F4011/production/system.o
+ .debug_info      0x0017ea        0x314 build/XC16_dsPIC30F4011/production/traps.o
+ .debug_info      0x001afe        0x125 build/XC16_dsPIC30F4011/production/user.o
  *(.gnu.linkonce.wi.*)
 
-.debug_abbrev     0x000000        0x2d5
+.debug_abbrev     0x000000        0x2e4
  *(.debug_abbrev)
  .debug_abbrev    0x000000         0x1f build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_abbrev    0x00001f         0x1f build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_abbrev    0x00003e        0x1b2 build/XC16_dsPIC30F4011/production/main.o
- .debug_abbrev    0x0001f0         0x34 build/XC16_dsPIC30F4011/production/system.o
- .debug_abbrev    0x000224         0x7d build/XC16_dsPIC30F4011/production/traps.o
- .debug_abbrev    0x0002a1         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_abbrev    0x00003e        0x1c1 build/XC16_dsPIC30F4011/production/main.o
+ .debug_abbrev    0x0001ff         0x34 build/XC16_dsPIC30F4011/production/system.o
+ .debug_abbrev    0x000233         0x7d build/XC16_dsPIC30F4011/production/traps.o
+ .debug_abbrev    0x0002b0         0x34 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_line       0x000000        0x2cd
+.debug_line       0x000000        0x2d3
  *(.debug_line)
  .debug_line      0x000000         0x1a build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_line      0x00001a         0x1a build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_line      0x000034        0x183 build/XC16_dsPIC30F4011/production/main.o
- .debug_line      0x0001b7         0x38 build/XC16_dsPIC30F4011/production/system.o
- .debug_line      0x0001ef         0xaa build/XC16_dsPIC30F4011/production/traps.o
- .debug_line      0x000299         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_line      0x000034        0x189 build/XC16_dsPIC30F4011/production/main.o
+ .debug_line      0x0001bd         0x38 build/XC16_dsPIC30F4011/production/system.o
+ .debug_line      0x0001f5         0xaa build/XC16_dsPIC30F4011/production/traps.o
+ .debug_line      0x00029f         0x34 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_frame      0x000000        0x2c4
+.debug_frame      0x000000        0x2e6
  *(.debug_frame)
- .debug_frame     0x000000        0x154 build/XC16_dsPIC30F4011/production/main.o
- .debug_frame     0x000154         0x30 build/XC16_dsPIC30F4011/production/system.o
- .debug_frame     0x000184        0x110 build/XC16_dsPIC30F4011/production/traps.o
- .debug_frame     0x000294         0x30 build/XC16_dsPIC30F4011/production/user.o
+ .debug_frame     0x000000        0x176 build/XC16_dsPIC30F4011/production/main.o
+ .debug_frame     0x000176         0x30 build/XC16_dsPIC30F4011/production/system.o
+ .debug_frame     0x0001a6        0x110 build/XC16_dsPIC30F4011/production/traps.o
+ .debug_frame     0x0002b6         0x30 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_str        0x000000        0x105
+.debug_str        0x000000        0x11f
  *(.debug_str)
- .debug_str       0x000000         0xf9 build/XC16_dsPIC30F4011/production/main.o
- .debug_str       0x0000f9          0xc build/XC16_dsPIC30F4011/production/traps.o
+ .debug_str       0x000000        0x113 build/XC16_dsPIC30F4011/production/main.o
+ .debug_str       0x000113          0xc build/XC16_dsPIC30F4011/production/traps.o
 
 .debug_loc
  *(.debug_loc)
@@ -527,16 +529,16 @@ userdata
  *(.debug_macinfo)
 
 .debug_pubnames
-                  0x000000        0x2b0
+                  0x000000        0x2c0
  *(.debug_pubnames)
  .debug_pubnames
-                  0x000000        0x1aa build/XC16_dsPIC30F4011/production/main.o
+                  0x000000        0x1ba build/XC16_dsPIC30F4011/production/main.o
  .debug_pubnames
-                  0x0001aa         0x2a build/XC16_dsPIC30F4011/production/system.o
+                  0x0001ba         0x2a build/XC16_dsPIC30F4011/production/system.o
  .debug_pubnames
-                  0x0001d4         0xbe build/XC16_dsPIC30F4011/production/traps.o
+                  0x0001e4         0xbe build/XC16_dsPIC30F4011/production/traps.o
  .debug_pubnames
-                  0x000292         0x1e build/XC16_dsPIC30F4011/production/user.o
+                  0x0002a2         0x1e build/XC16_dsPIC30F4011/production/user.o
 
 .debug_ranges
  *(.debug_ranges)
@@ -1393,8 +1395,8 @@ __c30_signature
  .aivt._AltMathError
                   0x00008c          0x2 build/XC16_dsPIC30F4011/production/traps.o
 
-.text             0x00058a        0x790
- .text            0x00058a        0x790 build/XC16_dsPIC30F4011/production/main.o
+.text             0x00058a        0x7f2
+ .text            0x00058a        0x7f2 build/XC16_dsPIC30F4011/production/main.o
                   0x00058a                  _set_duty_cycle
                   0x0005b4                  _configure_pins
                   0x00060e                  _readAnalogChannel
@@ -1404,18 +1406,19 @@ __c30_signature
                   0x00075e                  _txChar
                   0x000776                  _print_data
                   0x0007ce                  _print_header
-                  0x000802                  _filter_200hz
-                  0x00087c                  _main
+                  0x000802                  _filter_250hz
+                  0x000864                  _filter_10hz
+                  0x0008de                  _main
 
-.dinit            0x000d1a         0x68
- .dinit           0x000d1a         0x68 data_init
+.dinit            0x000d7c         0x68
+ .dinit           0x000d7c         0x68 data_init
 
-.init.delay32     0x000d82         0x1c
- .init.delay32    0x000d82         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
-                  0x000d82                  ___delay32
+.init.delay32     0x000de4         0x1c
+ .init.delay32    0x000de4         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
+                  0x000de4                  ___delay32
 
-.text             0x000d9e          0xc
- .text            0x000d9e          0x6 build/XC16_dsPIC30F4011/production/system.o
-                  0x000d9e                  _ConfigureOscillator
- .text            0x000da4          0x6 build/XC16_dsPIC30F4011/production/user.o
-                  0x000da4                  _InitApp
+.text             0x000e00          0xc
+ .text            0x000e00          0x6 build/XC16_dsPIC30F4011/production/system.o
+                  0x000e00                  _ConfigureOscillator
+ .text            0x000e06          0x6 build/XC16_dsPIC30F4011/production/user.o
+                  0x000e06                  _InitApp

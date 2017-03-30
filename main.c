@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-_FOSC(CSW_FSCM_OFF& FRC_PLL16); // Turn off the WatchDog Timer
+_FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
 _FWDT(WDT_OFF); // Watchdog off
-_FBORPOR(MCLR_DIS& PWRT_OFF); // Disable MCLR reset pin and turn off the power-up timers
+_FBORPOR(MCLR_EN & PWRT_OFF); // Disable MCLR reset pin aSnd turn off the power-up timers
+
 
 #define AD_FS 5 //Full-scale ADC voltage
 #define AD16Bit_FS 65535 //16bit resulution - 2^16
@@ -15,7 +16,8 @@ _FBORPOR(MCLR_DIS& PWRT_OFF); // Disable MCLR reset pin and turn off the power-u
 #define AT_PV 12 //PV gain
 #define AT_VDC 101 //Vdc gain
 #define NUM_FILTERS 6 //Number of filters used
-
+#define VDC_MIN 20
+#define VDC_MAX 40
 
 /*******************************************/
 /***********  Function Headers *************/
@@ -26,12 +28,16 @@ unsigned intreadAnalogChannel(int n);
 void txInt(unsigned int variable);
 void txFloat(float variable);
 void txChar(char caracter);
-unsigned int number(unsigned int y, unsigned int operator);
+unsigned int number(unsigned int y , unsigned int operator);
 void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput);
 void print_header(char* msg, int count);
 float filter_250hz(float input_value, int filter_number);
 float filter_10hz(float input_value, int filter_number);
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant);
+void turn_on(void);
+void turn_off(void);
+void DCBUS_lock(void);
+unsigned int readAnalogChannel(int channel);
 /**********  Function Headers *************/
 /*******************************************/
 
@@ -44,6 +50,7 @@ unsigned int x;
 int d1, d2;
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
+int DCBUS_threshold;
 /********** Auxiliary Variables *************/
 /********************************************/
 
@@ -69,6 +76,11 @@ float currentPV_filtered_ant = 0;
 /*******************************************/
 
 
+ float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
+ float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
+ long clockFrequency = 30000000; // 30MHz status clock
+
+
 /*******************************************/
 /************* Serial Com. ****************/
 char Message0[] = "\n 1-Turn on System";
@@ -84,6 +96,39 @@ char MessageX[] = "\nDUTY";
 int n;
 /************* Serial Com. ****************/
 /*******************************************/
+
+void turn_on(void){    
+         _LATD2 = 1;
+         _LATD0 = 1;	//reset
+         __delay32(0.1 * clockFrequency);
+         _LATD0 = 0;
+         print_header(Message7, sizeof(Message7));  // TURN ON MESSAGE
+    }
+    
+void turn_off(void){
+    set_duty_cycle(0);
+    _LATD2 = 0;
+    print_header(Message8, sizeof(Message8));  // TURN OFF MESSAGE
+}
+ 
+
+void DCBUS_lock(void){
+    
+    int unlock_count;
+    unlock_count = 0;
+    
+    do {
+        analog_voltageOutput = readAnalogChannel(2);
+        v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
+        voltageOutput = v2 * AT_VDC;
+        voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
+        if (voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX)
+        {
+            unlock_count ++;
+        }    
+    } while(unlock_count<100000);
+    DCBUS_threshold = 0;
+ }
 
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
 {
@@ -202,8 +247,9 @@ unsigned int readAnalogChannel(int channel)
     ADCON1bits.SAMP = 1;
     __delay32(1);
     ADCON1bits.SAMP = 0;
-    while (!ADCON1bits.DONE)
-        ;
+    while (!ADCON1bits.DONE){
+        // do nothing
+    }
     return ADCBUF0;
 }
 
@@ -248,8 +294,10 @@ void txFloat(float variable)
 
 unsigned int number(unsigned int y, unsigned int operator)
 {
-    while (U2STAbits.UTXBF)
-        ; //Waits until buffer is full
+    while (U2STAbits.UTXBF){
+         //Waits until buffer is full
+    }
+        
     U2TXREG = (y / operator) + 48;
     y = (y % operator);
     return 0;
@@ -257,8 +305,10 @@ unsigned int number(unsigned int y, unsigned int operator)
 
 void txChar(char txChar)
 {
-    while (U2STAbits.UTXBF)
-        ; //waits until buffer is full
+    while (U2STAbits.UTXBF){
+        //waits until buffer is full
+    }
+     
     U2TXREG = txChar;
 }
 
@@ -281,8 +331,10 @@ void print_data(float average_voltagePhotovoltaic, float average_currentPhotovol
 void print_header(char* msg, int count)
 {
     for (n = 0; n < (count - 1); n++) {
-        while (U2STAbits.UTXBF)
-            ; //Waits until buffer is full
+        while (U2STAbits.UTXBF){
+            // do nothing
+        }
+         //Waits until buffer is full
         U2TXREG = msg[n];
     }
 }
@@ -324,12 +376,10 @@ float filter_10hz(float input_value, int filter_number)
 int main()
 {
     int aux_i = 0, y = 0;
-    long clockFrequency = 30000000; // 30MHz status clock
     status = 1;
+    DCBUS_threshold = 1;
   
     configure_pins();
-    set_duty_cycle(0);
-
     // Filters' initialization
     for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
         value_ant1[aux_i] = 0;
@@ -337,23 +387,19 @@ int main()
         value_filt[aux_i] = 0;
     }
 
+    
+    
     while (1) {
 
         if (U2STAbits.URXDA == 1) { //Checks if received a character
             y = U2RXREG; 
-            if (y == '1' && status == 0) {
-                    status = 1;
-                    print_header(Message7, sizeof(Message7));
-                    _LATD2 = 1;
-                    _LATD0 = 1;	
-                    __delay32(0.1 * clockFrequency);
-                    _LATD0 = 0;
+            if (y == '1' && status == 0 && DCBUS_threshold == 0) {
+                status = 1;
+                turn_on(); //turn on system
             }
             if (y == '0'  && status == 1) {
                 status = 0;
-                set_duty_cycle(0);
-                _LATD2 = 0;
-                print_header(Message8, sizeof(Message8));
+                turn_off(); //turn off system
             }
             if (y == 'r' || y == 'R') {
                 print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
@@ -368,10 +414,8 @@ int main()
 
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 {
-    float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
-    float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
+   
     _T1IF = 0; // Clear Timer 1 interrupt flag
-    
     _LATD1 = 1 - _LATD1; //Debug only - Toggle RD1 pin
     LATBbits.LATB8 = 1; //Debug only - Toggle B8 pin
     
@@ -384,7 +428,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 
     //Reads the voltage from de photovoltaic panel (VPV)
     analog_voltagePhotovoltaic = readAnalogChannel(1);
-    v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;
+    v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;\
     voltagePhotovoltaic = v1 * AT_PV;
     
     // Reads the output voltage (VDC)
@@ -401,10 +445,19 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 
     /******************************************/
     /*************  DC PROTECTION  ************/
-    /******** 250HZ filter + overvoltage + undervoltage - Vdc Min. = X; Vdc Max. = X ********/
+    /******** 250HZ filter + overvoltage and undervoltage protection - Vdc Min. = X; Vdc Max. = X ********/
     voltagePV_filtered250 = filter_250hz(voltagePhotovoltaic, 3);
     currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
+    
+    if (voltageDCBUS_filtered250 < VDC_MIN || voltageDCBUS_filtered250 > VDC_MAX)
+    {
+       turn_off();
+       DCBUS_threshold = 1;
+       DCBUS_lock();
+       turn_on();
+    }
+  
     /*************  DC PROTECTION  ************/
     /******************************************/
 
@@ -423,6 +476,6 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     }
     /*************  MPPT  ************/
     /*********************************/
-    //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
-    
+    LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
+      
 }

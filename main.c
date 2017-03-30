@@ -38,19 +38,35 @@ void turn_on(void);
 void turn_off(void);
 void DCBUS_lock(void);
 unsigned int readAnalogChannel(int channel);
+void Task_Handler (void);
+void Serial_monitor (void);
+void TaskHandler(void);
+void init_filters(void);
 /**********  Function Headers *************/
 /*******************************************/
+
+typedef enum SystemState_t {
+	STATE_INITIAL,
+	STATE_OFF,
+	STATE_ON,
+	STATE_LOCKED,
+    STATE_IDLE_OFF,
+    STATE_IDLE_ON,
+} SystemState_t;
+
+volatile SystemState_t System_state = STATE_INITIAL;
 
 
 /********************************************/
 /********** Auxiliary Variables *************/
-int status;
+int serial_cmd;
 float f2;
 unsigned int x;
 int d1, d2;
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
 int DCBUS_threshold;
+int unlock_count = 0;
 /********** Auxiliary Variables *************/
 /********************************************/
 
@@ -78,7 +94,7 @@ float currentPV_filtered_ant = 0;
 
  float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
  float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
- long clockFrequency = 30000000; // 30MHz status clock
+ long clockFrequency = 30000000; // 30MHz serial_cmd clock
 
 
 /*******************************************/
@@ -97,6 +113,40 @@ int n;
 /************* Serial Com. ****************/
 /*******************************************/
 
+
+void init_filters(void) {
+        int aux_i = 0;
+        for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
+            value_ant1[aux_i] = 0;
+            value_filt_ant1[aux_i] = 0;
+            value_filt[aux_i] = 0;
+        }
+    }
+
+
+void Serial_monitor(void){
+    
+    int y=0;
+    
+    if (U2STAbits.URXDA == 1) { //Checks if received a character
+            y = U2RXREG; 
+            if (y == '1' && System_state == STATE_IDLE_OFF && DCBUS_threshold == 0) {
+                serial_cmd = 1;
+                System_state = STATE_ON; 
+            }
+            if (y == '0'  && (System_state = STATE_IDLE_ON || (DCBUS_threshold == 1))) {
+                serial_cmd = 0;
+                System_state = STATE_OFF;
+            }
+            if (y == 'r' || y == 'R') {
+                print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
+                //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);
+            }
+    }
+
+}
+
+
 void turn_on(void){    
          _LATD2 = 1;
          _LATD0 = 1;	//reset
@@ -113,26 +163,33 @@ void turn_off(void){
  
 
 void DCBUS_lock(void){
-    
+      
+    turn_off();
     int unlock_count;
     unlock_count = 0;
+    DCBUS_threshold = 1;
+
     
-    do {
-        analog_voltageOutput = readAnalogChannel(2);
-        v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
-        voltageOutput = v2 * AT_VDC;
-        voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
-        if (voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX)
-        {
-            unlock_count ++;
-        }    
-    } while(unlock_count<100000);
-    DCBUS_threshold = 0;
- }
+    analog_voltageOutput = readAnalogChannel(2);
+    v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
+    voltageOutput = v2 * AT_VDC;
+    voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
+    if (voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX)
+    {
+        unlock_count ++;
+    }    
+    
+    if (unlock_count == 500){
+        unlock_count = 0;
+        DCBUS_threshold = 0;
+        System_state = STATE_ON;
+    }
+    
+}
 
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
 {
-    if (status == 1){
+    if (serial_cmd == 1){
     float dI, dV;
     float dutyMax = 0.9;
     float dutyMin = 0.4;
@@ -373,42 +430,86 @@ float filter_10hz(float input_value, int filter_number)
 }
 
 
+void SysInit(void){
+            
+    analog_voltageOutput = readAnalogChannel(2);
+    v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
+    voltageOutput = v2 * AT_VDC;
+    voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
+    if (voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX)
+    {
+        unlock_count ++;
+    }    
+    
+    if (unlock_count == 500){
+        unlock_count = 0;
+        DCBUS_threshold = 0;
+        turn_on();
+        System_state = STATE_ON;
+    }
+}
+
+void TaskHandler(void)
+{
+	switch (System_state) {
+		case STATE_INITIAL:
+		{
+			SysInit();
+		}
+		break;
+
+		case STATE_ON:
+		{ 
+            turn_on();
+            System_state = STATE_IDLE_ON;
+		}
+		break;
+		
+		case STATE_OFF:
+		{
+            turn_off();
+            System_state = STATE_IDLE_OFF;
+		}
+		break;
+
+		case STATE_LOCKED:
+		{
+			DCBUS_lock();
+		}
+		break;
+        
+        case STATE_IDLE_ON:
+		{
+            
+		}
+		break;
+        
+        case STATE_IDLE_OFF:
+		{
+            
+		}
+		break;
+        
+		default:
+		break;
+	}
+}
+
 int main()
 {
-    int aux_i = 0, y = 0;
-    status = 1;
-    DCBUS_threshold = 1;
-  
-    configure_pins();
-    // Filters' initialization
-    for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
-        value_ant1[aux_i] = 0;
-        value_filt_ant1[aux_i] = 0;
-        value_filt[aux_i] = 0;
-    }
-
     
+    configure_pins();
+    init_filters();
     
     while (1) {
 
-        if (U2STAbits.URXDA == 1) { //Checks if received a character
-            y = U2RXREG; 
-            if (y == '1' && status == 0 && DCBUS_threshold == 0) {
-                status = 1;
-                turn_on(); //turn on system
-            }
-            if (y == '0'  && status == 1) {
-                status = 0;
-                turn_off(); //turn off system
-            }
-            if (y == 'r' || y == 'R') {
-                print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
-                //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);
-            }
-        }
-  
+		Serial_monitor();
+        TaskHandler();
+        
     }
+
     return 0;
+
 }
 
 
@@ -416,6 +517,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 {
    
     _T1IF = 0; // Clear Timer 1 interrupt flag
+    
     _LATD1 = 1 - _LATD1; //Debug only - Toggle RD1 pin
     LATBbits.LATB8 = 1; //Debug only - Toggle B8 pin
     
@@ -452,10 +554,8 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     
     if (voltageDCBUS_filtered250 < VDC_MIN || voltageDCBUS_filtered250 > VDC_MAX)
     {
-       turn_off();
-       DCBUS_threshold = 1;
-       DCBUS_lock();
-       turn_on();
+        DCBUS_threshold = 1;
+        System_state = STATE_LOCKED;
     }
   
     /*************  DC PROTECTION  ************/

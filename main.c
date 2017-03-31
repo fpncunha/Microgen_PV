@@ -18,6 +18,9 @@ _FBORPOR(MCLR_EN & PWRT_OFF); // Disable MCLR reset pin aSnd turn off the power-
 #define NUM_FILTERS 6 //Number of filters used
 #define VDC_MIN 20
 #define VDC_MAX 40
+#define DCBUS_OK 1
+#define DCBUS_NOK 0
+
 
 /*******************************************/
 /***********  Function Headers *************/
@@ -55,6 +58,7 @@ typedef enum SystemState_t {
 } SystemState_t;
 
 volatile SystemState_t System_state = STATE_INITIAL;
+int taskHander_runflag = 0;
 
 
 /********************************************/
@@ -65,7 +69,7 @@ unsigned int x;
 int d1, d2;
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
-int DCBUS_threshold;
+int DCBUS_flag;
 int unlock_count = 0;
 /********** Auxiliary Variables *************/
 /********************************************/
@@ -130,20 +134,21 @@ void Serial_monitor(void){
     
     if (U2STAbits.URXDA == 1) { //Checks if received a character
             y = U2RXREG; 
-            if (y == '1' && System_state == STATE_IDLE_OFF && DCBUS_threshold == 0) {
+            if (y == '1' && System_state == STATE_IDLE_OFF && DCBUS_flag == DCBUS_OK) {
                 serial_cmd = 1;
                 System_state = STATE_ON; 
-            }
-            if (y == '0'  && (System_state = STATE_IDLE_ON || (DCBUS_threshold == 1))) {
+                taskHander_runflag = 1;
+           }
+            if (y == '0'  && (System_state = STATE_IDLE_ON || System_state == STATE_LOCKED || System_state == STATE_INITIAL)) {
                 serial_cmd = 0;
                 System_state = STATE_OFF;
+                taskHander_runflag = 1;
             }
             if (y == 'r' || y == 'R') {
                 print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
                 //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);
             }
     }
-
 }
 
 
@@ -164,32 +169,22 @@ void turn_off(void){
 
 void DCBUS_lock(void){
       
-    turn_off();
-    int unlock_count;
-    unlock_count = 0;
-    DCBUS_threshold = 1;
-
-    
-    analog_voltageOutput = readAnalogChannel(2);
-    v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
-    voltageOutput = v2 * AT_VDC;
-    voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
-    if (voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX)
-    {
+    if (DCBUS_flag == DCBUS_OK){
         unlock_count ++;
     }    
+    else{
+        unlock_count = 0;
+    }
     
     if (unlock_count == 500){
         unlock_count = 0;
-        DCBUS_threshold = 0;
         System_state = STATE_ON;
     }
-    
 }
+    
 
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
 {
-    if (serial_cmd == 1){
     float dI, dV;
     float dutyMax = 0.9;
     float dutyMin = 0.4;
@@ -240,9 +235,8 @@ void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
         duty = dutyMin;
     }
     set_duty_cycle(duty); //Update duty cycle
-    }
-    }
-
+}
+ 
 void set_duty_cycle(float duty) //Delays PWM's 180
 {
     PDC1 = duty * (2 * 301.5);
@@ -432,19 +426,15 @@ float filter_10hz(float input_value, int filter_number)
 
 void SysInit(void){
             
-    analog_voltageOutput = readAnalogChannel(2);
-    v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
-    voltageOutput = v2 * AT_VDC;
-    voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
-    if (voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX)
-    {
+    if (DCBUS_flag == DCBUS_OK){
         unlock_count ++;
     }    
+    else{
+        unlock_count = 0;
+    }
     
     if (unlock_count == 500){
         unlock_count = 0;
-        DCBUS_threshold = 0;
-        turn_on();
         System_state = STATE_ON;
     }
 }
@@ -474,6 +464,7 @@ void TaskHandler(void)
 
 		case STATE_LOCKED:
 		{
+            turn_off();
 			DCBUS_lock();
 		}
 		break;
@@ -497,15 +488,15 @@ void TaskHandler(void)
 
 int main()
 {
-    
     configure_pins();
     init_filters();
     
     while (1) {
-
 		Serial_monitor();
-        TaskHandler();
-        
+        if (taskHander_runflag == 1){
+            TaskHandler();
+            taskHander_runflag = 0;
+        }   
     }
 
     return 0;
@@ -552,12 +543,17 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
     
-    if (voltageDCBUS_filtered250 < VDC_MIN || voltageDCBUS_filtered250 > VDC_MAX)
+    if ((voltageDCBUS_filtered250 < VDC_MIN || voltageDCBUS_filtered250 > VDC_MAX))
     {
-        DCBUS_threshold = 1;
-        System_state = STATE_LOCKED;
+        if (System_state =! STATE_INITIAL){
+            System_state = STATE_LOCKED;
+        }          
+        DCBUS_flag = DCBUS_NOK;
     }
-  
+    
+    else{
+        DCBUS_flag = DCBUS_OK;
+    }
     /*************  DC PROTECTION  ************/
     /******************************************/
 
@@ -576,6 +572,8 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     }
     /*************  MPPT  ************/
     /*********************************/
+    
+    taskHander_runflag = 1;
+    
     LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
-      
 }

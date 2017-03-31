@@ -97,12 +97,12 @@ Program Memory  [Origin = 0x100, Length = 0x7f00]
 section                    address   length (PC units)   length (bytes) (dec)
 -------                    -------   -----------------   --------------------
 .text                        0x100               0x48a           0x6cf  (1743)
-.text                        0x58a               0x90a           0xd8f  (3471)
-.dinit                       0xe94                0x6a            0x9f  (159)
-.init.delay32                0xefe                0x1c            0x2a  (42)
-.text                        0xf1a                 0xc            0x12  (18)
+.text                        0x58a               0x858           0xc84  (3204)
+.dinit                       0xde2                0x6a            0x9f  (159)
+.init.delay32                0xe4c                0x1c            0x2a  (42)
+.text                        0xe68                 0xc            0x12  (18)
 
-                 Total program memory used (bytes):         0x1539  (5433) 11%
+                 Total program memory used (bytes):         0x142e  (5166) 10%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x7c]
@@ -130,10 +130,10 @@ Data Memory  [Origin = 0x800, Length = 0x800]
 
 section                    address      alignment gaps    total length  (dec)
 -------                    -------      --------------    -------------------
-.nbss                        0x800                   0            0xa6  (166)
-.ndata                       0x8a6                   0            0x8a  (138)
+.nbss                        0x800                   0            0xa8  (168)
+.ndata                       0x8a8                   0            0x8a  (138)
 
-                 Total data memory used (bytes):          0x130  (304) 14%
+                 Total data memory used (bytes):          0x132  (306) 14%
 
 
 Dynamic Memory Usage
@@ -141,100 +141,102 @@ Dynamic Memory Usage
 region                     address                      maximum length  (dec)
 ------                     -------                      ---------------------
 heap                             0                                   0  (0)
-stack                        0x930                               0x6d0  (1744)
+stack                        0x932                               0x6ce  (1742)
 
-                 Maximum dynamic memory (bytes):          0x6d0  (1744)
+                 Maximum dynamic memory (bytes):          0x6ce  (1742)
 
 
 External Symbols in Data Memory (by address):
 
                     0x0800                  _System_state
-                    0x0802                  _serial_cmd
-                    0x0804                  _f2
-                    0x0808                  _x
-                    0x080a                  _d1
-                    0x080c                  _d2
-                    0x080e                  _duty
-                    0x0812                  _mppt_counter
-                    0x0814                  _DCBUS_threshold
-                    0x0816                  _unlock_count
-                    0x0818                  _value_ant1
-                    0x0830                  _value_filt_ant1
-                    0x0848                  _value_filt
-                    0x0860                  _voltagePV_filtered
-                    0x0864                  _currentPV_filtered
-                    0x0868                  _voltageDCBUS_filtered
-                    0x086c                  _voltagePV_filtered250
-                    0x0870                  _currentPV_filtered250
-                    0x0874                  _voltageDCBUS_filtered250
-                    0x0878                  _voltagePV_filtered_ant
-                    0x087c                  _currentPV_filtered_ant
-                    0x0880                  _v0
-                    0x0884                  _v1
-                    0x0888                  _v2
-                    0x088c                  _analog_voltagePhotovoltaic
-                    0x0890                  _analog_currentPhotovoltaic
-                    0x0894                  _analog_voltageOutput
-                    0x0898                  _voltagePhotovoltaic
-                    0x089c                  _currentPhotovoltaic
-                    0x08a0                  _voltageOutput
-                    0x08a4                  _n
-                    0x08a6                  _clockFrequency
-                    0x08aa                  _Message0
-                    0x08bd                  _MessageA
-                    0x08d1                  _Message1
-                    0x08d9                  _MessageB
-                    0x08e7                  _Message2
-                    0x08ef                  _Message3
-                    0x08f7                  _Message4
-                    0x0900                  _Message7
-                    0x0914                  _Message8
-                    0x0929                  _MessageX
+                    0x0802                  _taskHander_runflag
+                    0x0804                  _serial_cmd
+                    0x0806                  _f2
+                    0x080a                  _x
+                    0x080c                  _d1
+                    0x080e                  _d2
+                    0x0810                  _duty
+                    0x0814                  _mppt_counter
+                    0x0816                  _DCBUS_flag
+                    0x0818                  _unlock_count
+                    0x081a                  _value_ant1
+                    0x0832                  _value_filt_ant1
+                    0x084a                  _value_filt
+                    0x0862                  _voltagePV_filtered
+                    0x0866                  _currentPV_filtered
+                    0x086a                  _voltageDCBUS_filtered
+                    0x086e                  _voltagePV_filtered250
+                    0x0872                  _currentPV_filtered250
+                    0x0876                  _voltageDCBUS_filtered250
+                    0x087a                  _voltagePV_filtered_ant
+                    0x087e                  _currentPV_filtered_ant
+                    0x0882                  _v0
+                    0x0886                  _v1
+                    0x088a                  _v2
+                    0x088e                  _analog_voltagePhotovoltaic
+                    0x0892                  _analog_currentPhotovoltaic
+                    0x0896                  _analog_voltageOutput
+                    0x089a                  _voltagePhotovoltaic
+                    0x089e                  _currentPhotovoltaic
+                    0x08a2                  _voltageOutput
+                    0x08a6                  _n
+                    0x08a8                  _clockFrequency
+                    0x08ac                  _Message0
+                    0x08bf                  _MessageA
+                    0x08d3                  _Message1
+                    0x08db                  _MessageB
+                    0x08e9                  _Message2
+                    0x08f1                  _Message3
+                    0x08f9                  _Message4
+                    0x0902                  _Message7
+                    0x0916                  _Message8
+                    0x092b                  _MessageX
 
 External Symbols in Data Memory (by name):
 
-                    0x0814                  _DCBUS_threshold
-                    0x08aa                  _Message0
-                    0x08d1                  _Message1
-                    0x08e7                  _Message2
-                    0x08ef                  _Message3
-                    0x08f7                  _Message4
-                    0x0900                  _Message7
-                    0x0914                  _Message8
-                    0x08bd                  _MessageA
-                    0x08d9                  _MessageB
-                    0x0929                  _MessageX
+                    0x0816                  _DCBUS_flag
+                    0x08ac                  _Message0
+                    0x08d3                  _Message1
+                    0x08e9                  _Message2
+                    0x08f1                  _Message3
+                    0x08f9                  _Message4
+                    0x0902                  _Message7
+                    0x0916                  _Message8
+                    0x08bf                  _MessageA
+                    0x08db                  _MessageB
+                    0x092b                  _MessageX
                     0x0800                  _System_state
-                    0x0890                  _analog_currentPhotovoltaic
-                    0x0894                  _analog_voltageOutput
-                    0x088c                  _analog_voltagePhotovoltaic
-                    0x08a6                  _clockFrequency
-                    0x0864                  _currentPV_filtered
-                    0x0870                  _currentPV_filtered250
-                    0x087c                  _currentPV_filtered_ant
-                    0x089c                  _currentPhotovoltaic
-                    0x080a                  _d1
-                    0x080c                  _d2
-                    0x080e                  _duty
-                    0x0804                  _f2
-                    0x0812                  _mppt_counter
-                    0x08a4                  _n
-                    0x0802                  _serial_cmd
-                    0x0816                  _unlock_count
-                    0x0880                  _v0
-                    0x0884                  _v1
-                    0x0888                  _v2
-                    0x0818                  _value_ant1
-                    0x0848                  _value_filt
-                    0x0830                  _value_filt_ant1
-                    0x0868                  _voltageDCBUS_filtered
-                    0x0874                  _voltageDCBUS_filtered250
-                    0x08a0                  _voltageOutput
-                    0x0860                  _voltagePV_filtered
-                    0x086c                  _voltagePV_filtered250
-                    0x0878                  _voltagePV_filtered_ant
-                    0x0898                  _voltagePhotovoltaic
-                    0x0808                  _x
+                    0x0892                  _analog_currentPhotovoltaic
+                    0x0896                  _analog_voltageOutput
+                    0x088e                  _analog_voltagePhotovoltaic
+                    0x08a8                  _clockFrequency
+                    0x0866                  _currentPV_filtered
+                    0x0872                  _currentPV_filtered250
+                    0x087e                  _currentPV_filtered_ant
+                    0x089e                  _currentPhotovoltaic
+                    0x080c                  _d1
+                    0x080e                  _d2
+                    0x0810                  _duty
+                    0x0806                  _f2
+                    0x0814                  _mppt_counter
+                    0x08a6                  _n
+                    0x0804                  _serial_cmd
+                    0x0802                  _taskHander_runflag
+                    0x0818                  _unlock_count
+                    0x0882                  _v0
+                    0x0886                  _v1
+                    0x088a                  _v2
+                    0x081a                  _value_ant1
+                    0x084a                  _value_filt
+                    0x0832                  _value_filt_ant1
+                    0x086a                  _voltageDCBUS_filtered
+                    0x0876                  _voltageDCBUS_filtered250
+                    0x08a2                  _voltageOutput
+                    0x0862                  _voltagePV_filtered
+                    0x086e                  _voltagePV_filtered250
+                    0x087a                  _voltagePV_filtered_ant
+                    0x089a                  _voltagePhotovoltaic
+                    0x080a                  _x
 
 External Symbols in Program Memory (by address):
 
@@ -275,37 +277,37 @@ External Symbols in Program Memory (by address):
                   0x00052c                  ___floatundisf
                   0x00058a                  _init_filters
                   0x0005c6                  _Serial_monitor
-                  0x000634                  _turn_on
-                  0x000656                  _turn_off
-                  0x000668                  _DCBUS_lock
-                  0x0006f6                  _run_mppt
-                  0x0008c0                  _set_duty_cycle
-                  0x0008ea                  _configure_pins
-                  0x000962                  _readAnalogChannel
-                  0x000984                  _txInt
-                  0x000a44                  _txFloat
-                  0x000a80                  _number
-                  0x000ab4                  _txChar
-                  0x000acc                  _print_data
-                  0x000b24                  _print_header
-                  0x000b58                  _filter_250hz
-                  0x000bba                  _filter_10hz
-                  0x000c34                  _SysInit
-                  0x000cbc                  _TaskHandler
-                  0x000cfa                  _main
-                  0x000d06                  __T1Interrupt
-                  0x000efe                  ___delay32
-                  0x000f1a                  _ConfigureOscillator
-                  0x000f20                  _InitApp
+                  0x00063c                  _turn_on
+                  0x00065e                  _turn_off
+                  0x000670                  _DCBUS_lock
+                  0x000694                  _run_mppt
+                  0x000858                  _set_duty_cycle
+                  0x000882                  _configure_pins
+                  0x0008fa                  _readAnalogChannel
+                  0x00091c                  _txInt
+                  0x0009dc                  _txFloat
+                  0x000a18                  _number
+                  0x000a4c                  _txChar
+                  0x000a64                  _print_data
+                  0x000abc                  _print_header
+                  0x000af0                  _filter_250hz
+                  0x000b52                  _filter_10hz
+                  0x000bcc                  _SysInit
+                  0x000bf0                  _TaskHandler
+                  0x000c30                  _main
+                  0x000c48                  __T1Interrupt
+                  0x000e4c                  ___delay32
+                  0x000e68                  _ConfigureOscillator
+                  0x000e6e                  _InitApp
 
 External Symbols in Program Memory (by name):
 
-                  0x000f1a                  _ConfigureOscillator
-                  0x000668                  _DCBUS_lock
-                  0x000f20                  _InitApp
+                  0x000e68                  _ConfigureOscillator
+                  0x000670                  _DCBUS_lock
+                  0x000e6e                  _InitApp
                   0x0005c6                  _Serial_monitor
-                  0x000c34                  _SysInit
-                  0x000cbc                  _TaskHandler
+                  0x000bcc                  _SysInit
+                  0x000bf0                  _TaskHandler
                   0x0001ce                  __AddressError
                   0x0001e6                  __AltAddressError
                   0x0001f2                  __AltMathError
@@ -315,9 +317,9 @@ External Symbols in Program Memory (by name):
                   0x0001da                  __MathError
                   0x0001c8                  __OscillatorFail
                   0x0001d4                  __StackError
-                  0x000d06                  __T1Interrupt
+                  0x000c48                  __T1Interrupt
                   0x000200                  ___addsf3
-                  0x000efe                  ___delay32
+                  0x000e4c                  ___delay32
                   0x0002ba                  ___divsf3
                   0x00033e                  ___eqsf2
                   0x000346                  ___fixsfsi
@@ -343,22 +345,22 @@ External Symbols in Program Memory (by name):
                   0x00043e                  __funpack2
                   0x00013c                  __psv_init
                   0x000100                  __resetPRI
-                  0x0008ea                  _configure_pins
-                  0x000bba                  _filter_10hz
-                  0x000b58                  _filter_250hz
+                  0x000882                  _configure_pins
+                  0x000b52                  _filter_10hz
+                  0x000af0                  _filter_250hz
                   0x00058a                  _init_filters
-                  0x000cfa                  _main
-                  0x000a80                  _number
-                  0x000acc                  _print_data
-                  0x000b24                  _print_header
-                  0x000962                  _readAnalogChannel
-                  0x0006f6                  _run_mppt
-                  0x0008c0                  _set_duty_cycle
-                  0x000656                  _turn_off
-                  0x000634                  _turn_on
-                  0x000ab4                  _txChar
-                  0x000a44                  _txFloat
-                  0x000984                  _txInt
+                  0x000c30                  _main
+                  0x000a18                  _number
+                  0x000a64                  _print_data
+                  0x000abc                  _print_header
+                  0x0008fa                  _readAnalogChannel
+                  0x000694                  _run_mppt
+                  0x000858                  _set_duty_cycle
+                  0x00065e                  _turn_off
+                  0x00063c                  _turn_on
+                  0x000a4c                  _txChar
+                  0x0009dc                  _txFloat
+                  0x00091c                  _txInt
 
 Memory Configuration
 
@@ -549,45 +551,45 @@ userdata
 .comment
  *(.comment)
 
-.debug_info       0x000000       0x23b6
+.debug_info       0x000000       0x23b8
  *(.debug_info)
  .debug_info      0x000000         0xba build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_info      0x0000ba        0x114 build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_info      0x0001ce       0x1c7c build/XC16_dsPIC30F4011/production/main.o
- .debug_info      0x001e4a        0x133 build/XC16_dsPIC30F4011/production/system.o
- .debug_info      0x001f7d        0x314 build/XC16_dsPIC30F4011/production/traps.o
- .debug_info      0x002291        0x125 build/XC16_dsPIC30F4011/production/user.o
+ .debug_info      0x0001ce       0x1c7e build/XC16_dsPIC30F4011/production/main.o
+ .debug_info      0x001e4c        0x133 build/XC16_dsPIC30F4011/production/system.o
+ .debug_info      0x001f7f        0x314 build/XC16_dsPIC30F4011/production/traps.o
+ .debug_info      0x002293        0x125 build/XC16_dsPIC30F4011/production/user.o
  *(.gnu.linkonce.wi.*)
 
-.debug_abbrev     0x000000        0x348
+.debug_abbrev     0x000000        0x330
  *(.debug_abbrev)
  .debug_abbrev    0x000000         0x1f build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_abbrev    0x00001f         0x1f build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_abbrev    0x00003e        0x225 build/XC16_dsPIC30F4011/production/main.o
- .debug_abbrev    0x000263         0x34 build/XC16_dsPIC30F4011/production/system.o
- .debug_abbrev    0x000297         0x7d build/XC16_dsPIC30F4011/production/traps.o
- .debug_abbrev    0x000314         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_abbrev    0x00003e        0x20d build/XC16_dsPIC30F4011/production/main.o
+ .debug_abbrev    0x00024b         0x34 build/XC16_dsPIC30F4011/production/system.o
+ .debug_abbrev    0x00027f         0x7d build/XC16_dsPIC30F4011/production/traps.o
+ .debug_abbrev    0x0002fc         0x34 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_line       0x000000        0x314
+.debug_line       0x000000        0x30a
  *(.debug_line)
  .debug_line      0x000000         0x1a build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_line      0x00001a         0x1a build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_line      0x000034        0x1ca build/XC16_dsPIC30F4011/production/main.o
- .debug_line      0x0001fe         0x38 build/XC16_dsPIC30F4011/production/system.o
- .debug_line      0x000236         0xaa build/XC16_dsPIC30F4011/production/traps.o
- .debug_line      0x0002e0         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_line      0x000034        0x1c0 build/XC16_dsPIC30F4011/production/main.o
+ .debug_line      0x0001f4         0x38 build/XC16_dsPIC30F4011/production/system.o
+ .debug_line      0x00022c         0xaa build/XC16_dsPIC30F4011/production/traps.o
+ .debug_line      0x0002d6         0x34 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_frame      0x000000        0x426
+.debug_frame      0x000000        0x41a
  *(.debug_frame)
- .debug_frame     0x000000        0x2b6 build/XC16_dsPIC30F4011/production/main.o
- .debug_frame     0x0002b6         0x30 build/XC16_dsPIC30F4011/production/system.o
- .debug_frame     0x0002e6        0x110 build/XC16_dsPIC30F4011/production/traps.o
- .debug_frame     0x0003f6         0x30 build/XC16_dsPIC30F4011/production/user.o
+ .debug_frame     0x000000        0x2aa build/XC16_dsPIC30F4011/production/main.o
+ .debug_frame     0x0002aa         0x30 build/XC16_dsPIC30F4011/production/system.o
+ .debug_frame     0x0002da        0x110 build/XC16_dsPIC30F4011/production/traps.o
+ .debug_frame     0x0003ea         0x30 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_str        0x000000        0x27b
+.debug_str        0x000000        0x289
  *(.debug_str)
- .debug_str       0x000000        0x26f build/XC16_dsPIC30F4011/production/main.o
- .debug_str       0x00026f          0xc build/XC16_dsPIC30F4011/production/traps.o
+ .debug_str       0x000000        0x27d build/XC16_dsPIC30F4011/production/main.o
+ .debug_str       0x00027d          0xc build/XC16_dsPIC30F4011/production/traps.o
 
 .debug_loc
  *(.debug_loc)
@@ -596,16 +598,16 @@ userdata
  *(.debug_macinfo)
 
 .debug_pubnames
-                  0x000000        0x535
+                  0x000000        0x547
  *(.debug_pubnames)
  .debug_pubnames
-                  0x000000        0x42f build/XC16_dsPIC30F4011/production/main.o
+                  0x000000        0x441 build/XC16_dsPIC30F4011/production/main.o
  .debug_pubnames
-                  0x00042f         0x2a build/XC16_dsPIC30F4011/production/system.o
+                  0x000441         0x2a build/XC16_dsPIC30F4011/production/system.o
  .debug_pubnames
-                  0x000459         0xbe build/XC16_dsPIC30F4011/production/traps.o
+                  0x00046b         0xbe build/XC16_dsPIC30F4011/production/traps.o
  .debug_pubnames
-                  0x000517         0x1e build/XC16_dsPIC30F4011/production/user.o
+                  0x000529         0x1e build/XC16_dsPIC30F4011/production/user.o
 
 .debug_ranges
  *(.debug_ranges)
@@ -1398,53 +1400,54 @@ __c30_signature
  __c30_signature
                   0x0002d3          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(floatundisf.eo)
 
-.nbss               0x0800         0xa6
- .nbss              0x0800         0xa6 build/XC16_dsPIC30F4011/production/main.o
+.nbss               0x0800         0xa8
+ .nbss              0x0800         0xa8 build/XC16_dsPIC30F4011/production/main.o
                     0x0800                  _System_state
-                    0x0802                  _serial_cmd
-                    0x0804                  _f2
-                    0x0808                  _x
-                    0x080a                  _d1
-                    0x080c                  _d2
-                    0x080e                  _duty
-                    0x0812                  _mppt_counter
-                    0x0814                  _DCBUS_threshold
-                    0x0816                  _unlock_count
-                    0x0818                  _value_ant1
-                    0x0830                  _value_filt_ant1
-                    0x0848                  _value_filt
-                    0x0860                  _voltagePV_filtered
-                    0x0864                  _currentPV_filtered
-                    0x0868                  _voltageDCBUS_filtered
-                    0x086c                  _voltagePV_filtered250
-                    0x0870                  _currentPV_filtered250
-                    0x0874                  _voltageDCBUS_filtered250
-                    0x0878                  _voltagePV_filtered_ant
-                    0x087c                  _currentPV_filtered_ant
-                    0x0880                  _v0
-                    0x0884                  _v1
-                    0x0888                  _v2
-                    0x088c                  _analog_voltagePhotovoltaic
-                    0x0890                  _analog_currentPhotovoltaic
-                    0x0894                  _analog_voltageOutput
-                    0x0898                  _voltagePhotovoltaic
-                    0x089c                  _currentPhotovoltaic
-                    0x08a0                  _voltageOutput
-                    0x08a4                  _n
+                    0x0802                  _taskHander_runflag
+                    0x0804                  _serial_cmd
+                    0x0806                  _f2
+                    0x080a                  _x
+                    0x080c                  _d1
+                    0x080e                  _d2
+                    0x0810                  _duty
+                    0x0814                  _mppt_counter
+                    0x0816                  _DCBUS_flag
+                    0x0818                  _unlock_count
+                    0x081a                  _value_ant1
+                    0x0832                  _value_filt_ant1
+                    0x084a                  _value_filt
+                    0x0862                  _voltagePV_filtered
+                    0x0866                  _currentPV_filtered
+                    0x086a                  _voltageDCBUS_filtered
+                    0x086e                  _voltagePV_filtered250
+                    0x0872                  _currentPV_filtered250
+                    0x0876                  _voltageDCBUS_filtered250
+                    0x087a                  _voltagePV_filtered_ant
+                    0x087e                  _currentPV_filtered_ant
+                    0x0882                  _v0
+                    0x0886                  _v1
+                    0x088a                  _v2
+                    0x088e                  _analog_voltagePhotovoltaic
+                    0x0892                  _analog_currentPhotovoltaic
+                    0x0896                  _analog_voltageOutput
+                    0x089a                  _voltagePhotovoltaic
+                    0x089e                  _currentPhotovoltaic
+                    0x08a2                  _voltageOutput
+                    0x08a6                  _n
 
-.ndata              0x08a6         0x8a
- .ndata             0x08a6         0x8a build/XC16_dsPIC30F4011/production/main.o
-                    0x08a6                  _clockFrequency
-                    0x08aa                  _Message0
-                    0x08bd                  _MessageA
-                    0x08d1                  _Message1
-                    0x08d9                  _MessageB
-                    0x08e7                  _Message2
-                    0x08ef                  _Message3
-                    0x08f7                  _Message4
-                    0x0900                  _Message7
-                    0x0914                  _Message8
-                    0x0929                  _MessageX
+.ndata              0x08a8         0x8a
+ .ndata             0x08a8         0x8a build/XC16_dsPIC30F4011/production/main.o
+                    0x08a8                  _clockFrequency
+                    0x08ac                  _Message0
+                    0x08bf                  _MessageA
+                    0x08d3                  _Message1
+                    0x08db                  _MessageB
+                    0x08e9                  _Message2
+                    0x08f1                  _Message3
+                    0x08f9                  _Message4
+                    0x0902                  _Message7
+                    0x0916                  _Message8
+                    0x092b                  _MessageX
 
 .ivt._T1Interrupt
                   0x00001a          0x2
@@ -1491,39 +1494,39 @@ __c30_signature
  .aivt._AltMathError
                   0x00008c          0x2 build/XC16_dsPIC30F4011/production/traps.o
 
-.text             0x00058a        0x90a
- .text            0x00058a        0x90a build/XC16_dsPIC30F4011/production/main.o
+.text             0x00058a        0x858
+ .text            0x00058a        0x858 build/XC16_dsPIC30F4011/production/main.o
                   0x00058a                  _init_filters
                   0x0005c6                  _Serial_monitor
-                  0x000634                  _turn_on
-                  0x000656                  _turn_off
-                  0x000668                  _DCBUS_lock
-                  0x0006f6                  _run_mppt
-                  0x0008c0                  _set_duty_cycle
-                  0x0008ea                  _configure_pins
-                  0x000962                  _readAnalogChannel
-                  0x000984                  _txInt
-                  0x000a44                  _txFloat
-                  0x000a80                  _number
-                  0x000ab4                  _txChar
-                  0x000acc                  _print_data
-                  0x000b24                  _print_header
-                  0x000b58                  _filter_250hz
-                  0x000bba                  _filter_10hz
-                  0x000c34                  _SysInit
-                  0x000cbc                  _TaskHandler
-                  0x000cfa                  _main
-                  0x000d06                  __T1Interrupt
+                  0x00063c                  _turn_on
+                  0x00065e                  _turn_off
+                  0x000670                  _DCBUS_lock
+                  0x000694                  _run_mppt
+                  0x000858                  _set_duty_cycle
+                  0x000882                  _configure_pins
+                  0x0008fa                  _readAnalogChannel
+                  0x00091c                  _txInt
+                  0x0009dc                  _txFloat
+                  0x000a18                  _number
+                  0x000a4c                  _txChar
+                  0x000a64                  _print_data
+                  0x000abc                  _print_header
+                  0x000af0                  _filter_250hz
+                  0x000b52                  _filter_10hz
+                  0x000bcc                  _SysInit
+                  0x000bf0                  _TaskHandler
+                  0x000c30                  _main
+                  0x000c48                  __T1Interrupt
 
-.dinit            0x000e94         0x6a
- .dinit           0x000e94         0x6a data_init
+.dinit            0x000de2         0x6a
+ .dinit           0x000de2         0x6a data_init
 
-.init.delay32     0x000efe         0x1c
- .init.delay32    0x000efe         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
-                  0x000efe                  ___delay32
+.init.delay32     0x000e4c         0x1c
+ .init.delay32    0x000e4c         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
+                  0x000e4c                  ___delay32
 
-.text             0x000f1a          0xc
- .text            0x000f1a          0x6 build/XC16_dsPIC30F4011/production/system.o
-                  0x000f1a                  _ConfigureOscillator
- .text            0x000f20          0x6 build/XC16_dsPIC30F4011/production/user.o
-                  0x000f20                  _InitApp
+.text             0x000e68          0xc
+ .text            0x000e68          0x6 build/XC16_dsPIC30F4011/production/system.o
+                  0x000e68                  _ConfigureOscillator
+ .text            0x000e6e          0x6 build/XC16_dsPIC30F4011/production/user.o
+                  0x000e6e                  _InitApp

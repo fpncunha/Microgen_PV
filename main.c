@@ -18,8 +18,8 @@ _FBORPOR(MCLR_EN & PWRT_OFF); // Disable MCLR reset pin aSnd turn off the power-
 #define NUM_FILTERS 6 //Number of filters used
 #define VDC_MIN 20
 #define VDC_MAX 40
-#define DCBUS_OK 1
-#define DCBUS_NOK 0
+#define DCBUS_OK 0
+#define DCBUS_NOK 1
 
 
 /*******************************************/
@@ -45,6 +45,9 @@ void Task_Handler (void);
 void Serial_monitor (void);
 void TaskHandler(void);
 void init_filters(void);
+
+int serial_com = 1;
+
 /**********  Function Headers *************/
 /*******************************************/
 
@@ -55,6 +58,7 @@ typedef enum SystemState_t {
 	STATE_LOCKED,
     STATE_IDLE_OFF,
     STATE_IDLE_ON,
+    STATE_LOCKED_IDLE,
 } SystemState_t;
 
 volatile SystemState_t System_state = STATE_INITIAL;
@@ -63,13 +67,12 @@ int taskHander_runflag = 0;
 
 /********************************************/
 /********** Auxiliary Variables *************/
-int serial_cmd;
 float f2;
 unsigned int x;
 int d1, d2;
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
-int DCBUS_flag;
+int DCBUS_flag = DCBUS_NOK;
 int unlock_count = 0;
 /********** Auxiliary Variables *************/
 /********************************************/
@@ -118,6 +121,7 @@ int n;
 /*******************************************/
 
 
+
 void init_filters(void) {
         int aux_i = 0;
         for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
@@ -135,14 +139,14 @@ void Serial_monitor(void){
     if (U2STAbits.URXDA == 1) { //Checks if received a character
             y = U2RXREG; 
             if (y == '1' && System_state == STATE_IDLE_OFF && DCBUS_flag == DCBUS_OK) {
-                serial_cmd = 1;
+                serial_com = 1;
                 System_state = STATE_ON; 
-                taskHander_runflag = 1;
+                //taskHander_runflag = 1;
            }
-            if (y == '0'  && (System_state = STATE_IDLE_ON || System_state == STATE_LOCKED || System_state == STATE_INITIAL)) {
-                serial_cmd = 0;
+            if (y == '0'  && (System_state == STATE_IDLE_ON) || (System_state == STATE_LOCKED_IDLE) ) {
+                serial_com = 0;
                 System_state = STATE_OFF;
-                taskHander_runflag = 1;
+              //  taskHander_runflag = 1;
             }
             if (y == 'r' || y == 'R') {
                 print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
@@ -157,13 +161,13 @@ void turn_on(void){
          _LATD0 = 1;	//reset
          __delay32(0.1 * clockFrequency);
          _LATD0 = 0;
-         print_header(Message7, sizeof(Message7));  // TURN ON MESSAGE
+      //   print_header(Message7, sizeof(Message7));  // TURN ON MESSAGE
     }
     
 void turn_off(void){
     set_duty_cycle(0);
     _LATD2 = 0;
-    print_header(Message8, sizeof(Message8));  // TURN OFF MESSAGE
+    //print_header(Message8, sizeof(Message8));  // TURN OFF MESSAGE
 }
  
 
@@ -176,7 +180,7 @@ void DCBUS_lock(void){
         unlock_count = 0;
     }
     
-    if (unlock_count == 500){
+    if (unlock_count == 500 && serial_com == 1){
         unlock_count = 0;
         System_state = STATE_ON;
     }
@@ -234,7 +238,9 @@ void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
     if (duty <= dutyMin){
         duty = dutyMin;
     }
+   
     set_duty_cycle(duty); //Update duty cycle
+  
 }
  
 void set_duty_cycle(float duty) //Delays PWM's 180
@@ -433,7 +439,7 @@ void SysInit(void){
         unlock_count = 0;
     }
     
-    if (unlock_count == 500){
+    if (unlock_count == 500 && serial_com == 1){
         unlock_count = 0;
         System_state = STATE_ON;
     }
@@ -465,19 +471,26 @@ void TaskHandler(void)
 		case STATE_LOCKED:
 		{
             turn_off();
-			DCBUS_lock();
+            System_state = STATE_LOCKED_IDLE;
 		}
+        
+        case STATE_LOCKED_IDLE:
+		{
+			DCBUS_lock();
+            
+		}break;
+        
 		break;
         
         case STATE_IDLE_ON:
 		{
-            
+            LATBbits.LATB8 = 0;
 		}
 		break;
         
         case STATE_IDLE_OFF:
 		{
-            
+             LATBbits.LATB8 = 1;
 		}
 		break;
         
@@ -490,13 +503,15 @@ int main()
 {
     configure_pins();
     init_filters();
-    
+    LATBbits.LATB8 = 0;
+
     while (1) {
-		Serial_monitor();
         if (taskHander_runflag == 1){
             TaskHandler();
             taskHander_runflag = 0;
         }   
+        Serial_monitor();
+
     }
 
     return 0;
@@ -510,7 +525,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     _T1IF = 0; // Clear Timer 1 interrupt flag
     
     _LATD1 = 1 - _LATD1; //Debug only - Toggle RD1 pin
-    LATBbits.LATB8 = 1; //Debug only - Toggle B8 pin
+   // LATBbits.LATB8 = 1; //Debug only - Toggle B8 pin
     
     /****************************************/
     /*************  ACQUISITION  ************/
@@ -543,25 +558,28 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
     
-    if ((voltageDCBUS_filtered250 < VDC_MIN || voltageDCBUS_filtered250 > VDC_MAX))
+    if ((voltageOutput > VDC_MIN && voltageOutput < VDC_MAX))
     {
-        if (System_state =! STATE_INITIAL){
-            System_state = STATE_LOCKED;
-        }          
-        DCBUS_flag = DCBUS_NOK;
+        DCBUS_flag = DCBUS_OK;
     }
     
     else{
-        DCBUS_flag = DCBUS_OK;
+
+        if ((System_state =! STATE_INITIAL) || (System_state =! STATE_LOCKED) || (System_state =! STATE_LOCKED_IDLE)){
+            System_state = STATE_LOCKED;
+           // txFloat(voltageOutput);
+          //  turn_off();
+        }          
+        DCBUS_flag = DCBUS_NOK;
+        
     }
     /*************  DC PROTECTION  ************/
     /******************************************/
 
     /*********************************/
     /*************  MPPT  ************/
-    if (mppt_counter >= 100) {
-
-        //__delay32(10000); //Random delay
+    if (mppt_counter >= 100 && System_state == STATE_IDLE_ON) {
+               //__delay32(10000); //Random delay
         run_mppt(voltagePV_filtered, voltagePV_filtered_ant, currentPV_filtered, currentPV_filtered_ant);
         mppt_counter = 0;
         voltagePV_filtered_ant = voltagePV_filtered;
@@ -575,5 +593,5 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     
     taskHander_runflag = 1;
     
-    LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
+    //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
 }

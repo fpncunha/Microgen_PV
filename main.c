@@ -45,6 +45,9 @@ void Task_Handler (void);
 void Serial_monitor (void);
 void TaskHandler(void);
 void init_filters(void);
+void updateCommCounter(void);
+void TaskCommBroadcast(void);
+void toggleCommBroadcast(void);
 
 int serial_com = 1;
 
@@ -63,15 +66,15 @@ typedef enum SystemState_t {
 
 volatile SystemState_t System_state = STATE_INITIAL;
 int taskHander_runflag = 0;
+int taskCommBroadcast_runflag = 0;
 
 
 /********************************************/
 /********** Auxiliary Variables *************/
-float f2;
-unsigned int x;
-int d1, d2;
+
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
+int comm_counter = 0; //MPPT counter initialization
 int DCBUS_flag = DCBUS_NOK;
 int unlock_count = 0;
 /********** Auxiliary Variables *************/
@@ -119,17 +122,38 @@ char MessageX[] = "\nDUTY";
 int n;
 /************* Serial Com. ****************/
 /*******************************************/
+void updateCommCounter(void) {
+   if (comm_counter >= 1000) {
+        TaskCommBroadcast();
+        comm_counter = 0;     
+   }
+   else {
+        comm_counter +=1;
+   }        
+}
 
-
-
+void toggleCommBroadcast(void) {
+    taskCommBroadcast_runflag = (taskCommBroadcast_runflag == 1) ? 0:1;
+}
+/***** broadcast de comunicação a 1seg *****/
+/*******************************************/
+void TaskCommBroadcast(void) {
+    if(taskCommBroadcast_runflag == 1) {
+         print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
+                //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);       
+        //taskCommBroadcast_runflag = 0;
+    }   
+}
+/************* Serial Com. ****************/
+/*******************************************/
 void init_filters(void) {
-        int aux_i = 0;
-        for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
-            value_ant1[aux_i] = 0;
-            value_filt_ant1[aux_i] = 0;
-            value_filt[aux_i] = 0;
-        }
+    int aux_i = 0;
+    for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
+        value_ant1[aux_i] = 0;
+        value_filt_ant1[aux_i] = 0;
+        value_filt[aux_i] = 0;
     }
+}
 
 
 void Serial_monitor(void){
@@ -143,14 +167,16 @@ void Serial_monitor(void){
                 System_state = STATE_ON; 
                 //taskHander_runflag = 1;
            }
-            if (y == '0'  && (System_state == STATE_IDLE_ON) || (System_state == STATE_LOCKED_IDLE) ) {
+            if ((y == '0')  && ((System_state == STATE_IDLE_ON) || (System_state == STATE_LOCKED_IDLE)) ) {
                 serial_com = 0;
                 System_state = STATE_OFF;
               //  taskHander_runflag = 1;
             }
             if (y == 'r' || y == 'R') {
-                print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
-                //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);
+                //taskCommBroadcast_runflag = 1;              
+            }
+            if (y == 'b' || y == 'B') {
+                toggleCommBroadcast();
             }
     }
 }
@@ -162,7 +188,7 @@ void turn_on(void){
          __delay32(0.1 * clockFrequency);
          _LATD0 = 0;
       //   print_header(Message7, sizeof(Message7));  // TURN ON MESSAGE
-    }
+ }
     
 void turn_off(void){
     set_duty_cycle(0);
@@ -312,41 +338,46 @@ unsigned int readAnalogChannel(int channel)
 
 void txInt(unsigned int variable)
 {
-    x = variable;
+    unsigned int aux_var = variable;
+
     if (variable >= 10000) {
-        x = number(x, 10000);
-        x = number(x, 1000);
-        x = number(x, 100);
-        x = number(x, 10);
-        x = number(x, 1);
+        aux_var = number(aux_var, 10000);
+        aux_var = number(aux_var, 1000);
+        aux_var = number(aux_var, 100);
+        aux_var = number(aux_var, 10);
+        aux_var = number(aux_var, 1);
     }
     if (variable >= 1000 && variable < 10000) {
-        x = number(x, 1000);
-        x = number(x, 100);
-        x = number(x, 10);
-        x = number(x, 1);
+        aux_var = number(aux_var, 1000);
+        aux_var = number(aux_var, 100);
+        aux_var = number(aux_var, 10);
+        aux_var = number(aux_var, 1);
     }
     if (variable >= 100 && variable < 1000) {
-        x = number(x, 100);
-        x = number(x, 10);
-        x = number(x, 1);
+        aux_var = number(aux_var, 100);
+        aux_var = number(aux_var, 10);
+        aux_var = number(aux_var, 1);
     }
     if (variable >= 10 && variable < 100) {
-        x = number(x, 10);
-        x = number(x, 1);
+        aux_var = number(aux_var, 10);
+        aux_var = number(aux_var, 1);
     }
-    if (variable < 10)
-        x = number(x, 1);
+    if (variable < 10) {
+        aux_var = number(aux_var, 1);
+    }
 }
 
 void txFloat(float variable)
 {
+    float f2;
+    int d1, d2;
+    
     d1 = (int)variable;
     f2 = variable - d1;
     d2 = (f2 * 1000);
-    txInt(d1);
+    txInt((unsigned int)d1);
     txChar('.');
-    txInt(d2);
+    txInt((unsigned int)d2);
 }
 
 unsigned int number(unsigned int y, unsigned int operator)
@@ -578,7 +609,8 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 
     /*********************************/
     /*************  MPPT  ************/
-    if (mppt_counter >= 100 && System_state == STATE_IDLE_ON) {
+    //TODO: ver se o else não inclui "ifs" em que o mppt é maior que 100
+    if ((mppt_counter >= 100) && (System_state == STATE_IDLE_ON)) {
                //__delay32(10000); //Random delay
         run_mppt(voltagePV_filtered, voltagePV_filtered_ant, currentPV_filtered, currentPV_filtered_ant);
         mppt_counter = 0;
@@ -591,6 +623,8 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     /*************  MPPT  ************/
     /*********************************/
     
+    updateCommCounter();
+       
     taskHander_runflag = 1;
     
     //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin

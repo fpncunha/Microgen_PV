@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <project>
-  <executable name="dist/XC16_dsPIC30F4011/production/Microgen_PV.production.elf">
+  <executable name="dist/XC16_dsPIC30F4011/debug/Microgen_PV.debug.elf">
     <memory name="data">
       <units>bytes</units>
       <length>2048</length>
-      <used>300</used>
-      <free>1748</free>
+      <used>380</used>
+      <free>1668</free>
     </memory>
     <memory name="program">
       <units>bytes</units>
       <length>48768</length>
-      <used>5319</used>
-      <free>43449</free>
+      <used>5295</used>
+      <free>43473</free>
     </memory>
   </executable>
 </project>

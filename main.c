@@ -162,12 +162,19 @@ void Serial_monitor(void){
     
     if (U2STAbits.URXDA == 1) { //Checks if received a character
             y = U2RXREG; 
-            if (y == '1' && System_state == STATE_IDLE_OFF && DCBUS_flag == DCBUS_OK) {
+            if (y == '1' && DCBUS_flag == DCBUS_OK) {
                 serial_com = 1;
                 System_state = STATE_ON; 
                 //taskHander_runflag = 1;
            }
-            if ((y == '0')  && ((System_state == STATE_IDLE_ON) || (System_state == STATE_LOCKED_IDLE)) ) {
+            
+            if (y == '1' && DCBUS_flag == DCBUS_NOK) {
+                serial_com = 1;
+                System_state = STATE_LOCKED; 
+                //taskHander_runflag = 1;
+           }
+            
+            if ((y == '0')) {
                 serial_com = 0;
                 System_state = STATE_OFF;
               //  taskHander_runflag = 1;
@@ -359,8 +366,11 @@ void txInt(unsigned int variable)
         aux_var = number(aux_var, 1);
     }
     if (variable >= 10 && variable < 100) {
+       
+
         aux_var = number(aux_var, 10);
         aux_var = number(aux_var, 1);
+
     }
     if (variable < 10) {
         aux_var = number(aux_var, 1);
@@ -371,13 +381,13 @@ void txFloat(float variable)
 {
     float f2;
     int d1, d2;
-    
     d1 = (int)variable;
     f2 = variable - d1;
     d2 = (f2 * 1000);
     txInt((unsigned int)d1);
     txChar('.');
     txInt((unsigned int)d2);
+    txInt(d2);
 }
 
 unsigned int number(unsigned int y, unsigned int operator)
@@ -388,7 +398,7 @@ unsigned int number(unsigned int y, unsigned int operator)
         
     U2TXREG = (y / operator) + 48;
     y = (y % operator);
-    return 0;
+    return y;
 }
 
 void txChar(char txChar)
@@ -573,7 +583,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     // Reads the output voltage (VDC)
     analog_voltageOutput = readAnalogChannel(2);
     v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
-    voltageOutput = v2 * AT_VDC;
+    voltageOutput = (v2 * AT_VDC * 0.981 + 5.89);
     
     // Filters
     voltagePV_filtered = filter_10hz(voltagePhotovoltaic, 0);
@@ -589,7 +599,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
     
-    if ((voltageOutput > VDC_MIN && voltageOutput < VDC_MAX))
+    if ((voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX))
     {
         DCBUS_flag = DCBUS_OK;
     }

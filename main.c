@@ -6,8 +6,9 @@
 
 _FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
 _FWDT(WDT_OFF); // Watchdog off
-_FBORPOR(MCLR_EN & PWRT_OFF); // Disable MCLR reset pin aSnd turn off the power-up timers
+_FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off the power-up timers
 
+// _FBORPOR(MCLR_EN);
 
 #define AD_FS 5 //Full-scale ADC voltage
 #define AD16Bit_FS 65535 //16bit resulution - 2^16
@@ -16,12 +17,15 @@ _FBORPOR(MCLR_EN & PWRT_OFF); // Disable MCLR reset pin aSnd turn off the power-
 #define AT_PV 12 //PV gain
 #define AT_VDC 101 //Vdc gain
 #define NUM_FILTERS 6 //Number of filters used
-#define VDC_MIN 20
-#define VDC_MAX 40
-#define DCBUS_OK 0
-#define DCBUS_NOK 1
+#define VDC_MIN 350  //DC BUS Threshold lower limit
+#define VDC_MAX 420 //DC BUS Threshold upper limit
+#define DCBUS_OK 0 //DC BUS OK flag VDC > VDC_MIN && VDC < VDC_MAX
+#define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
 
 
+
+
+ 
 /*******************************************/
 /***********  Function Headers *************/
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void); // 1Khz interrupt 
@@ -49,34 +53,39 @@ void updateCommCounter(void);
 void TaskCommBroadcast(void);
 void toggleCommBroadcast(void);
 
-int serial_com = 1;
 
 /**********  Function Headers *************/
 /*******************************************/
+ 
 
+/******************************/
+/*******  STATE MACHINE *******/
 typedef enum SystemState_t {
-	STATE_INITIAL,
-	STATE_OFF,
-	STATE_ON,
-	STATE_LOCKED,
-    STATE_IDLE_OFF,
-    STATE_IDLE_ON,
-    STATE_LOCKED_IDLE,
+	STATE_INITIAL,  //INITIAL STATE 
+	STATE_OFF,  //TURN OFF STATE 
+	STATE_ON, //TURN ON STATE
+	STATE_LOCKED, //VDC LOCK STATE (DCBUS_NOK DETECTED)
+    STATE_IDLE_OFF, //OFF STATE
+    STATE_IDLE_ON, //ON STATE
+    STATE_LOCKED_IDLE, //LOCKED STATE (UNTIL DCBUS_OK)
 } SystemState_t;
+/*******  STATE MACHINE *******/
+/******************************/
+
 
 volatile SystemState_t System_state = STATE_INITIAL;
-int taskHander_runflag = 0;
-int taskCommBroadcast_runflag = 0;
+int taskHander_runflag = 0; //taskHander flag - synchronize state machine with the main 1Khz interrupt
+int taskCommBroadcast_runflag = 0; //broadcast to usart
 
 
 /********************************************/
 /********** Auxiliary Variables *************/
-
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
-int comm_counter = 0; //MPPT counter initialization
-int DCBUS_flag = DCBUS_NOK;
+int comm_counter = 0; //USART broadcast counter initialization (1s)
+int DCBUS_flag = DCBUS_NOK; 
 int unlock_count = 0;
+int serial_com = 1;
 /********** Auxiliary Variables *************/
 /********************************************/
 
@@ -98,6 +107,8 @@ float voltageDCBUS_filtered250 = 0;
 
 float voltagePV_filtered_ant = 0;
 float currentPV_filtered_ant = 0;
+
+
 /********** Filters' variables *************/
 /*******************************************/
 
@@ -161,8 +172,8 @@ void Serial_monitor(void){
     int y=0;
     
     if (U2STAbits.URXDA == 1) { //Checks if received a character
-            y = U2RXREG; 
-            if (y == '1' && DCBUS_flag == DCBUS_OK) {
+            y = U2RXREG; //Y = received character
+            if (y == '1' && DCBUS_flag == DCBUS_OK) { 
                 serial_com = 1;
                 System_state = STATE_ON; 
                 //taskHander_runflag = 1;
@@ -329,6 +340,8 @@ void configure_pins()
     U2MODEbits.UARTEN = 1;
     U2STAbits.UTXISEL = 1;
     U2STAbits.UTXEN = 1;
+    
+    
 }
 
 unsigned int readAnalogChannel(int channel)
@@ -473,6 +486,8 @@ float filter_10hz(float input_value, int filter_number)
 
 void SysInit(void){
             
+    
+    set_duty_cycle(0);
     if (DCBUS_flag == DCBUS_OK){
         unlock_count ++;
     }    
@@ -491,47 +506,47 @@ void TaskHandler(void)
 	switch (System_state) {
 		case STATE_INITIAL:
 		{
-			SysInit();
+			SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
 		}
 		break;
 
-		case STATE_ON:
+		case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
 		{ 
             turn_on();
             System_state = STATE_IDLE_ON;
 		}
 		break;
 		
-		case STATE_OFF:
+		case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
 		{
             turn_off();
             System_state = STATE_IDLE_OFF;
 		}
 		break;
 
-		case STATE_LOCKED:
+		case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
 		{
             turn_off();
             System_state = STATE_LOCKED_IDLE;
 		}
         
-        case STATE_LOCKED_IDLE:
+        case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
 		{
 			DCBUS_lock();
-            
+         
 		}break;
         
 		break;
         
-        case STATE_IDLE_ON:
+        case STATE_IDLE_ON: //Não faz nada
 		{
-            LATBbits.LATB8 = 0;
+          //  LATBbits.LATB8 = 0;
 		}
 		break;
         
-        case STATE_IDLE_OFF:
+        case STATE_IDLE_OFF: //Não faz nada
 		{
-             LATBbits.LATB8 = 1;
+          //   LATBbits.LATB8 = 1;
 		}
 		break;
         
@@ -542,9 +557,16 @@ void TaskHandler(void)
 
 int main()
 {
+    set_duty_cycle(0);
+    TRISD = 0x0000; //RD0 and RD1 output, RD2 to RD8 input
+    TRISB = 0x0000; //P
+     _LATD2 = 0;
+    _LATD0 = 0; 
     configure_pins();
     init_filters();
     LATBbits.LATB8 = 0;
+    _LATD2 = 0;
+    _LATD0 = 0; 
 
     while (1) {
         if (taskHander_runflag == 1){

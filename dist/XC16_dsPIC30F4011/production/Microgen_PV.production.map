@@ -97,12 +97,12 @@ Program Memory  [Origin = 0x100, Length = 0x7f00]
 section                    address   length (PC units)   length (bytes) (dec)
 -------                    -------   -----------------   --------------------
 .text                        0x100               0x48a           0x6cf  (1743)
-.text                        0x58a               0x8cc           0xd32  (3378)
-.dinit                       0xe56                0x6e            0xa5  (165)
-.init.delay32                0xec4                0x1c            0x2a  (42)
-.text                        0xee0                 0xc            0x12  (18)
+.text                        0x58a               0x8ac           0xd02  (3330)
+.dinit                       0xe36                0x6e            0xa5  (165)
+.init.delay32                0xea4                0x1c            0x2a  (42)
+.text                        0xec0                 0xc            0x12  (18)
 
-                 Total program memory used (bytes):         0x14e2  (5346) 10%
+                 Total program memory used (bytes):         0x14b2  (5298) 10%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x7c]
@@ -294,16 +294,16 @@ External Symbols in Program Memory (by address):
                   0x000c0c                  _SysInit
                   0x000c3a                  _TaskHandler
                   0x000c86                  _main
-                  0x000cac                  __T1Interrupt
-                  0x000ec4                  ___delay32
-                  0x000ee0                  _ConfigureOscillator
-                  0x000ee6                  _InitApp
+                  0x000ca6                  __T1Interrupt
+                  0x000ea4                  ___delay32
+                  0x000ec0                  _ConfigureOscillator
+                  0x000ec6                  _InitApp
 
 External Symbols in Program Memory (by name):
 
-                  0x000ee0                  _ConfigureOscillator
+                  0x000ec0                  _ConfigureOscillator
                   0x0006a4                  _DCBUS_lock
-                  0x000ee6                  _InitApp
+                  0x000ec6                  _InitApp
                   0x00061a                  _Serial_monitor
                   0x000c0c                  _SysInit
                   0x0005b8                  _TaskCommBroadcast
@@ -317,9 +317,9 @@ External Symbols in Program Memory (by name):
                   0x0001da                  __MathError
                   0x0001c8                  __OscillatorFail
                   0x0001d4                  __StackError
-                  0x000cac                  __T1Interrupt
+                  0x000ca6                  __T1Interrupt
                   0x000200                  ___addsf3
-                  0x000ec4                  ___delay32
+                  0x000ea4                  ___delay32
                   0x0002ba                  ___divsf3
                   0x00033e                  ___eqsf2
                   0x000346                  ___fixsfsi
@@ -572,14 +572,14 @@ userdata
  .debug_abbrev    0x00028e         0x7d build/XC16_dsPIC30F4011/production/traps.o
  .debug_abbrev    0x00030b         0x34 build/XC16_dsPIC30F4011/production/user.o
 
-.debug_line       0x000000        0x31b
+.debug_line       0x000000        0x315
  *(.debug_line)
  .debug_line      0x000000         0x1a build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_line      0x00001a         0x1a build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_line      0x000034        0x1d1 build/XC16_dsPIC30F4011/production/main.o
- .debug_line      0x000205         0x38 build/XC16_dsPIC30F4011/production/system.o
- .debug_line      0x00023d         0xaa build/XC16_dsPIC30F4011/production/traps.o
- .debug_line      0x0002e7         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_line      0x000034        0x1cb build/XC16_dsPIC30F4011/production/main.o
+ .debug_line      0x0001ff         0x38 build/XC16_dsPIC30F4011/production/system.o
+ .debug_line      0x000237         0xaa build/XC16_dsPIC30F4011/production/traps.o
+ .debug_line      0x0002e1         0x34 build/XC16_dsPIC30F4011/production/user.o
 
 .debug_frame      0x000000        0x46e
  *(.debug_frame)
@@ -1494,8 +1494,8 @@ __c30_signature
  .aivt._AltMathError
                   0x00008c          0x2 build/XC16_dsPIC30F4011/production/traps.o
 
-.text             0x00058a        0x8cc
- .text            0x00058a        0x8cc build/XC16_dsPIC30F4011/production/main.o
+.text             0x00058a        0x8ac
+ .text            0x00058a        0x8ac build/XC16_dsPIC30F4011/production/main.o
                   0x00058a                  _updateCommCounter
                   0x0005a4                  _toggleCommBroadcast
                   0x0005b8                  _TaskCommBroadcast
@@ -1519,17 +1519,17 @@ __c30_signature
                   0x000c0c                  _SysInit
                   0x000c3a                  _TaskHandler
                   0x000c86                  _main
-                  0x000cac                  __T1Interrupt
+                  0x000ca6                  __T1Interrupt
 
-.dinit            0x000e56         0x6e
- .dinit           0x000e56         0x6e data_init
+.dinit            0x000e36         0x6e
+ .dinit           0x000e36         0x6e data_init
 
-.init.delay32     0x000ec4         0x1c
- .init.delay32    0x000ec4         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
-                  0x000ec4                  ___delay32
+.init.delay32     0x000ea4         0x1c
+ .init.delay32    0x000ea4         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
+                  0x000ea4                  ___delay32
 
-.text             0x000ee0          0xc
- .text            0x000ee0          0x6 build/XC16_dsPIC30F4011/production/system.o
-                  0x000ee0                  _ConfigureOscillator
- .text            0x000ee6          0x6 build/XC16_dsPIC30F4011/production/user.o
-                  0x000ee6                  _InitApp
+.text             0x000ec0          0xc
+ .text            0x000ec0          0x6 build/XC16_dsPIC30F4011/production/system.o
+                  0x000ec0                  _ConfigureOscillator
+ .text            0x000ec6          0x6 build/XC16_dsPIC30F4011/production/user.o
+                  0x000ec6                  _InitApp

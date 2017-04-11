@@ -37,6 +37,7 @@ void txFloat(float variable);
 void txChar(char caracter);
 unsigned int number(unsigned int y , unsigned int operator);
 void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput);
+void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
 void print_header(char* msg, int count);
 float filter_250hz(float input_value, int filter_number);
 float filter_10hz(float input_value, int filter_number);
@@ -52,6 +53,7 @@ void init_filters(void);
 void updateCommCounter(void);
 void TaskCommBroadcast(void);
 void toggleCommBroadcast(void);
+
 
 
 /**********  Function Headers *************/
@@ -108,6 +110,8 @@ float voltageDCBUS_filtered250 = 0;
 float voltagePV_filtered_ant = 0;
 float currentPV_filtered_ant = 0;
 
+float power_PV = 0;
+
 
 /********** Filters' variables *************/
 /*******************************************/
@@ -150,7 +154,7 @@ void toggleCommBroadcast(void) {
 /*******************************************/
 void TaskCommBroadcast(void) {
     if(taskCommBroadcast_runflag == 1) {
-         print_data(voltageDCBUS_filtered250, currentPV_filtered, PDC1, voltageDCBUS_filtered);
+         print_data_parsing(voltageDCBUS_filtered250, currentPV_filtered, power_PV, voltageDCBUS_filtered, PDC1);
                 //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);       
         //taskCommBroadcast_runflag = 0;
     }   
@@ -439,6 +443,20 @@ void print_data(float average_voltagePhotovoltaic, float average_currentPhotovol
     txChar('V');
 }
 
+void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty)
+{
+    txFloat(average_voltagePhotovoltaic);
+    txChar(';');
+    txFloat(average_currentPhotovoltaic);
+    txChar(';');
+    txFloat(average_PowerPhotovoltaic);
+    txChar(';');
+    txFloat(average_voltageOutput);
+    txChar(';');
+    txFloat(duty / (2 * 3.015));
+}
+
+
 void print_header(char* msg, int count)
 {
     for (n = 0; n < (count - 1); n++) {
@@ -620,6 +638,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     voltagePV_filtered250 = filter_250hz(voltagePhotovoltaic, 3);
     currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
+    power_PV = currentPV_filtered250 * currentPV_filtered;
     
     if ((voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX))
     {

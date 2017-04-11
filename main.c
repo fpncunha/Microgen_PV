@@ -6,7 +6,7 @@
 
 _FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
 _FWDT(WDT_OFF); // Watchdog off
-_FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off the power-up timers
+_FBORPOR(MCLR_EN&PWRT_OFF&BORV27 ); // Disable MCLR reset pin aSnd turn off the power-up timers
 
 // _FBORPOR(MCLR_EN);
 
@@ -21,9 +21,6 @@ _FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off t
 #define VDC_MAX 420 //DC BUS Threshold upper limit
 #define DCBUS_OK 0 //DC BUS OK flag VDC > VDC_MIN && VDC < VDC_MAX
 #define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
-
-
-
 
  
 /*******************************************/
@@ -206,15 +203,18 @@ void Serial_monitor(void){
 
 void turn_on(void){    
          _LATD2 = 1;
-         _LATD0 = 1;	//reset
-         __delay32(0.1 * clockFrequency);
-         _LATD0 = 0;
+         _LATD3 = 1;	//reset
+         __delay32(0.5 * clockFrequency);
+         _LATD3 = 0;
+         //_LATD3 = 1;
       //   print_header(Message7, sizeof(Message7));  // TURN ON MESSAGE
  }
     
 void turn_off(void){
+    
+    //_LATD3 = 0;
     set_duty_cycle(0);
-    _LATD2 = 0;
+   // _LATD2 = 0;
     //print_header(Message8, sizeof(Message8));  // TURN OFF MESSAGE
 }
  
@@ -228,7 +228,7 @@ void DCBUS_lock(void){
         unlock_count = 0;
     }
     
-    if (unlock_count == 500 && serial_com == 1){
+    if (unlock_count >= 500 && serial_com == 1){
         unlock_count = 0;
         System_state = STATE_ON;
     }
@@ -299,9 +299,10 @@ void set_duty_cycle(float duty) //Delays PWM's 180
 
 void configure_pins()
 {
+    
     //Configure Port D and B
     LATD = 0; //Output equals 0
-    TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input
+    TRISD = 0b11110000; //RD0 and RD1 output, RD2 to RD8 input
     TRISB = 0x01FF; //Ports B are inputs
     //TRISBbits.TRISB8 = 0; //Debug only - Pin B8 is configured as output
 
@@ -322,7 +323,7 @@ void configure_pins()
     ADCSSL = 0; //ADC input scan select register
     ADCON2 = 0; //Voltage reference from AVDD and AVSS
     ADCON3 = 0x0005; //Manual Sample, ADCS=5 -> Tad = 3*Tcy
-    ADCHS = 0x0000; //Selects the input channels to be converted
+    ADCHS = 0x0000; //Selects the inp\ut channels to be converted
     ADCON1bits.ADON = 1; //Turn ADC ON
 
     //Configuration of PWMs
@@ -513,7 +514,7 @@ void SysInit(void){
         unlock_count = 0;
     }
     
-    if (unlock_count == 500 && serial_com == 1){
+    if (unlock_count >= 500 && serial_com == 1){
         unlock_count = 0;
         System_state = STATE_ON;
     }
@@ -575,16 +576,14 @@ void TaskHandler(void)
 
 int main()
 {
+    TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input    
+    _LATD1 = 1;
+    LATBbits.LATB8 = 1;    
+    
     set_duty_cycle(0);
-    TRISD = 0x0000; //RD0 and RD1 output, RD2 to RD8 input
-    TRISB = 0x0000; //P
-     _LATD2 = 0;
-    _LATD0 = 0; 
+
     configure_pins();
     init_filters();
-    LATBbits.LATB8 = 0;
-    _LATD2 = 0;
-    _LATD0 = 0; 
 
     while (1) {
         if (taskHander_runflag == 1){
@@ -596,7 +595,7 @@ int main()
     }
 
     return 0;
-
+     
 }
 
 
@@ -604,9 +603,6 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
 {
    
     _T1IF = 0; // Clear Timer 1 interrupt flag
-    
-    _LATD1 = 1 - _LATD1; //Debug only - Toggle RD1 pin
-   // LATBbits.LATB8 = 1; //Debug only - Toggle B8 pin
     
     /****************************************/
     /*************  ACQUISITION  ************/

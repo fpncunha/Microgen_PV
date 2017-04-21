@@ -4,11 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-_FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
-_FWDT(WDT_OFF); // Watchdog off
-_FBORPOR(MCLR_EN&PWRT_OFF&BORV27 ); // Disable MCLR reset pin aSnd turn off the power-up timers
+// FOSC
+#pragma config FPR = FRC_PLL16          // Primary Oscillator Mode (FRC w/ PLL 16x)
+#pragma config FCKSMEN = CSW_FSCM_OFF   // Clock Switching and Monitor (Sw Disabled, Mon Disabled)
 
-// _FBORPOR(MCLR_EN);
+// FWDT
+#pragma config WDT = WDT_OFF            // Watchdog Timer (Disabled)
+
+// FBORPOR
+#pragma config FPWRT = PWRT_OFF         // POR Timer Value (Timer Disabled)
+#pragma config BODENV = BORV27          // Brown Out Voltage (2.7V)
+#pragma config MCLRE = MCLR_EN          // Master Clear Enable (Enabled)
+
 
 #define AD_FS 5 //Full-scale ADC voltage
 #define AD16Bit_FS 65535 //16bit resulution - 2^16
@@ -17,53 +24,57 @@ _FBORPOR(MCLR_EN&PWRT_OFF&BORV27 ); // Disable MCLR reset pin aSnd turn off the 
 #define AT_PV 12 //PV gain
 #define AT_VDC 101 //Vdc gain
 #define NUM_FILTERS 6 //Number of filters used
-#define VDC_MIN 350  //DC BUS Threshold lower limit
-#define VDC_MAX 420 //DC BUS Threshold upper limit
+#define VDC_MIN 340  //DC BUS Threshold lower limit
+#define VDC_MAX 440 //DC BUS Threshold upper limit
 #define DCBUS_OK 0 //DC BUS OK flag VDC > VDC_MIN && VDC < VDC_MAX
 #define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
 
- 
+
 /*******************************************/
 /***********  Function Headers *************/
+
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void); // 1Khz interrupt 
-void configure_pins(); 
-void set_duty_cycle(float duty); 
+void configure_pins();
+void set_duty_cycle(float duty);
 unsigned intreadAnalogChannel(int n);
 void txInt(unsigned int variable);
 void txFloat(float variable);
 void txChar(char caracter);
-unsigned int number(unsigned int y , unsigned int operator);
+unsigned int number(unsigned int y, unsigned int operator);
 void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput);
 void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
 void print_header(char* msg, int count);
 float filter_250hz(float input_value, int filter_number);
 float filter_10hz(float input_value, int filter_number);
+float filter_1hz(float input_value, int filter_number);
+float filter_01hz(float input_value, int filter_number);
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant);
 void turn_on(void);
 void turn_off(void);
 void DCBUS_lock(void);
 unsigned int readAnalogChannel(int channel);
-void Task_Handler (void);
-void Serial_monitor (void);
+void Task_Handler(void);
+void Serial_monitor(void);
 void TaskHandler(void);
 void init_filters(void);
 void updateCommCounter(void);
 void TaskCommBroadcast(void);
+void TaskCommBroadcast_parsing(void);
 void toggleCommBroadcast(void);
-
-
+void toggleCommBroadcast_parsing(void);
 
 /**********  Function Headers *************/
 /*******************************************/
- 
+
 
 /******************************/
+
 /*******  STATE MACHINE *******/
 typedef enum SystemState_t {
-	STATE_INITIAL,  //INITIAL STATE 
-	STATE_OFF,  //TURN OFF STATE 
-	STATE_ON, //TURN ON STATE
-	STATE_LOCKED, //VDC LOCK STATE (DCBUS_NOK DETECTED)
+    STATE_INITIAL, //INITIAL STATE 
+    STATE_OFF, //TURN OFF STATE 
+    STATE_ON, //TURN ON STATE
+    STATE_LOCKED, //VDC LOCK STATE (DCBUS_NOK DETECTED)
     STATE_IDLE_OFF, //OFF STATE
     STATE_IDLE_ON, //ON STATE
     STATE_LOCKED_IDLE, //LOCKED STATE (UNTIL DCBUS_OK)
@@ -72,20 +83,21 @@ typedef enum SystemState_t {
 /******************************/
 
 
-volatile SystemState_t System_state = STATE_INITIAL;
-int taskHander_runflag = 0; //taskHander flag - synchronize state machine with the main 1Khz interrupt
-int taskCommBroadcast_runflag = 0; //broadcast to usart
-
-
 /********************************************/
-/********** Auxiliary Variables *************/
+/******************* Variables *************/
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
 int comm_counter = 0; //USART broadcast counter initialization (1s)
-int DCBUS_flag = DCBUS_NOK; 
+int DCBUS_flag = DCBUS_NOK;
 int unlock_count = 0;
 int serial_com = 1;
-/********** Auxiliary Variables *************/
+int toggle_broadcast_aux = 0;
+int toggle_broadcast_parsing_aux = 0;
+volatile SystemState_t System_state = STATE_INITIAL;
+int taskHander_runflag = 0; //taskHander flag - synchronize state machine with the main 1kHz interrupt
+int taskCommBroadcast_runflag = 0; //broadcast to USART
+int taskCommBroadcast_parsing_runflag = 0;
+/********** Variables *************/
 /********************************************/
 
 
@@ -96,16 +108,30 @@ float value_ant1[NUM_FILTERS];
 float value_filt_ant1[NUM_FILTERS];
 float value_filt[NUM_FILTERS];
 
-float voltagePV_filtered = 0;
-float currentPV_filtered = 0;
-float voltageDCBUS_filtered = 0;
 
-float voltagePV_filtered250 = 0;
-float currentPV_filtered250 = 0;
-float voltageDCBUS_filtered250 = 0;
+float voltagePV_filtered_01Hz = 0;
+float currentPV_filtered_01Hz = 0;
+float voltageDCBUS_filtered_01Hz = 0;
+float powerPV_filtered_01Hz = 0;
+
+float voltagePV_filtered_1Hz = 0;
+float currentPV_filtered_1Hz = 0;
+float voltageDCBUS_filtered_1Hz = 0;
+float powerPV_filtered_1Hz = 0;
+
+float voltagePV_filtered_10Hz = 0;
+float currentPV_filtered_10Hz = 0;
+float voltageDCBUS_filtered_10Hz = 0;
+float powerPV_filtered10Hz = 0;
+
+float voltagePV_filtered_250Hz = 0;
+float currentPV_filtered_250Hz = 0;
+float voltageDCBUS_filtered_250Hz = 0;
+float powerPV_filtered_250Hz = 0;
 
 float voltagePV_filtered_ant = 0;
 float currentPV_filtered_ant = 0;
+float powerPV_filtered_ant = 0;
 
 float power_PV = 0;
 
@@ -114,9 +140,9 @@ float power_PV = 0;
 /*******************************************/
 
 
- float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
- float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
- long clockFrequency = 30000000; // 30MHz serial_cmd clock
+float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
+float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
+long clockFrequency = 30000000; // 30MHz serial_cmd clock
 
 
 /*******************************************/
@@ -133,30 +159,49 @@ char Message8[] = "\n ***System OFF*** \n";
 char MessageX[] = "\nDUTY";
 int n;
 /************* Serial Com. ****************/
+
 /*******************************************/
 void updateCommCounter(void) {
-   if (comm_counter >= 1000) {
+    if (comm_counter >= 1000 && toggle_broadcast_aux == 1) {
         TaskCommBroadcast();
-        comm_counter = 0;     
-   }
-   else {
-        comm_counter +=1;
-   }        
+        comm_counter = 0;
+    } else if (comm_counter >= 1000 && toggle_broadcast_parsing_aux == 1) {
+        TaskCommBroadcast_parsing();
+        comm_counter = 0;
+    }
+    else {
+        comm_counter += 1;
+
+
+    }
 }
 
 void toggleCommBroadcast(void) {
-    taskCommBroadcast_runflag = (taskCommBroadcast_runflag == 1) ? 0:1;
+    taskCommBroadcast_runflag = (taskCommBroadcast_runflag == 1) ? 0 : 1;
+}
+
+void toggleCommBroadcast_parsing(void) {
+    taskCommBroadcast_parsing_runflag = (taskCommBroadcast_parsing_runflag == 1) ? 0 : 1;
 }
 /***** broadcast de comunicação a 1seg *****/
+
 /*******************************************/
 void TaskCommBroadcast(void) {
-    if(taskCommBroadcast_runflag == 1) {
-         print_data_parsing(voltageDCBUS_filtered250, currentPV_filtered, power_PV, voltageDCBUS_filtered, PDC1);
-                //print_data(voltagePV_filtered, currentPV_filtered, PDC1, voltageDCBUS_filtered);       
+    if (taskCommBroadcast_runflag == 1) {
+        //print_data_parsing(voltageDCBUS_filtered250, currentPV_filtered10, power_PV, voltageDCBUS_filtered10, PDC1);
+        print_data(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, PDC1, voltageDCBUS_filtered_10Hz);
         //taskCommBroadcast_runflag = 0;
-    }   
+    }
+}
+
+void TaskCommBroadcast_parsing(void) {
+    if (taskCommBroadcast_parsing_runflag == 1) {
+        print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, power_PV, voltageDCBUS_filtered_10Hz, PDC1);
+        //taskCommBroadcast_runflag = 0;
+    }
 }
 /************* Serial Com. ****************/
+
 /*******************************************/
 void init_filters(void) {
     int aux_i = 0;
@@ -167,79 +212,85 @@ void init_filters(void) {
     }
 }
 
+/*******************************************/
 
-void Serial_monitor(void){
-    
-    int y=0;
-    
+void Serial_monitor(void) {
+
+    int y = 0;
+
     if (U2STAbits.URXDA == 1) { //Checks if received a character
-            y = U2RXREG; //Y = received character
-            if (y == '1' && DCBUS_flag == DCBUS_OK) { 
-                serial_com = 1;
-                System_state = STATE_ON; 
-                //taskHander_runflag = 1;
-           }
-            
-            if (y == '1' && DCBUS_flag == DCBUS_NOK) {
-                serial_com = 1;
-                System_state = STATE_LOCKED; 
-                //taskHander_runflag = 1;
-           }
-            
-            if ((y == '0')) {
-                serial_com = 0;
-                System_state = STATE_OFF;
-              //  taskHander_runflag = 1;
-            }
-            if (y == 'r' || y == 'R') {
-                //taskCommBroadcast_runflag = 1;              
-            }
-            if (y == 'b' || y == 'B') {
-                toggleCommBroadcast();
-            }
+        y = U2RXREG; //Y = received character
+        if (y == '1' && DCBUS_flag == DCBUS_OK) {
+            toggle_broadcast_parsing_aux = 0;
+            toggle_broadcast_aux = 0;
+            serial_com = 1;
+            System_state = STATE_ON;
+            //taskHander_runflag = 1;
+        }
+
+        if (y == '1' && DCBUS_flag == DCBUS_NOK) {
+            toggle_broadcast_parsing_aux = 0;
+            toggle_broadcast_aux = 0;
+            serial_com = 1;
+            System_state = STATE_LOCKED;
+            //taskHander_runflag = 1;
+        }
+
+        if ((y == '0')) {
+            toggle_broadcast_parsing_aux = 0;
+            toggle_broadcast_aux = 0;
+            serial_com = 0;
+            System_state = STATE_OFF;
+            //  taskHander_runflag = 1;
+        }
+        if (y == 'r' || y == 'R') {
+            //taskCommBroadcast_runflag = 1;              
+        }
+        if (y == 'b' || y == 'B') {
+            toggle_broadcast_aux = 1;
+            toggle_broadcast_parsing_aux = 0;
+            toggleCommBroadcast();
+        }
+        if (y == 'e' || y == 'E') {
+            toggle_broadcast_parsing_aux = 1;
+            toggle_broadcast_aux = 0;
+            toggleCommBroadcast_parsing();
+
+        }
     }
 }
 
-
-void turn_on(void){    
-         _LATD2 = 1;
-         _LATD3 = 1;	//reset
-         __delay32(0.5 * clockFrequency);
-         _LATD3 = 0;
-         //_LATD3 = 1;
-      //   print_header(Message7, sizeof(Message7));  // TURN ON MESSAGE
- }
-    
-void turn_off(void){
-    
-    //_LATD3 = 0;
-    set_duty_cycle(0);
-   // _LATD2 = 0;
-    //print_header(Message8, sizeof(Message8));  // TURN OFF MESSAGE
+void turn_on(void) {
+    _LATD2 = 1;
+    _LATD3 = 1; //reset
+    __delay32(0.5 * clockFrequency);
+    _LATD3 = 0;
 }
- 
 
-void DCBUS_lock(void){
-      
-    if (DCBUS_flag == DCBUS_OK){
-        unlock_count ++;
-    }    
-    else{
+void turn_off(void) {
+    set_duty_cycle(0);
+}
+
+void DCBUS_lock(void) {
+
+    if (DCBUS_flag == DCBUS_OK) {
+        unlock_count++;
+    } else {
         unlock_count = 0;
     }
-    
-    if (unlock_count >= 500 && serial_com == 1){
+
+    if (unlock_count >= 500 && serial_com == 1) {
         unlock_count = 0;
         System_state = STATE_ON;
     }
 }
-    
 
-void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
-{
+void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant) {
     float dI, dV;
-    float dutyMax = 0.9;
-    float dutyMin = 0.4;
+    float dutyMax =
+
+            0.9;
+    float dutyMin = 0.5;
 
     float dutyStep = 0.002;
     float deltaV = 0.01;
@@ -252,54 +303,47 @@ void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant)
     dV = vfilt - vfilt_ant;
     if ((dV <= deltaV) && (dV >= -deltaV)) {
         if ((dI <= deltaI) && (dI >= -deltaI)) {
-            //do nothing
-        }
-        else {
-            if (dI > deltaI){ 
+            //Do nothing
+        } else {
+            if (dI > deltaI) {
                 duty -= dutyStep;
-            }
-            else{
+            } else {
                 duty += dutyStep;
             }
         }
-    }
-    else {
+    } else {
         auxG = ifilt / vfilt;
         auxDG = dI / dV;
         G = auxG + auxDG;
         if ((G <= deltaG) && (G >= -deltaG)) {
-            //do nothing
-        }
-        else {
-            if (G > deltaG){
+            //Do nothing
+        } else {
+            if (G > deltaG) {
                 duty -= dutyStep;
-            }
-            else{
+            } else {
                 duty += dutyStep;
             }
         }
     }
     //Saturates PWM between 0,4 and 0,9
-    if (duty >= dutyMax){
+    if (duty >= dutyMax) {
         duty = dutyMax;
     }
-    if (duty <= dutyMin){
+    if (duty <= dutyMin) {
         duty = dutyMin;
     }
-   
+
     set_duty_cycle(duty); //Update duty cycle
-  
+
 }
- 
+
 void set_duty_cycle(float duty) //Delays PWM's 180
 {
     PDC1 = duty * (2 * 301.5);
     PDC2 = (1 - duty) * (2 * 301.5);
 }
 
-void configure_pins()
-{
-    
+void configure_pins() {
     //Configure Port D and B
     LATD = 0; //Output equals 0
     TRISD = 0b11110000; //RD0 and RD1 output, RD2 to RD8 input
@@ -345,24 +389,22 @@ void configure_pins()
     U2MODEbits.UARTEN = 1;
     U2STAbits.UTXISEL = 1;
     U2STAbits.UTXEN = 1;
-    
-    
+
+
 }
 
-unsigned int readAnalogChannel(int channel)
-{
+unsigned int readAnalogChannel(int channel) {
     ADCHS = channel;
     ADCON1bits.SAMP = 1;
     __delay32(1);
     ADCON1bits.SAMP = 0;
-    while (!ADCON1bits.DONE){
+    while (!ADCON1bits.DONE) {
         // do nothing
     }
     return ADCBUF0;
 }
 
-void txInt(unsigned int variable)
-{
+void txInt(unsigned int variable) {
     unsigned int aux_var = variable;
 
     if (variable >= 10000) {
@@ -384,7 +426,7 @@ void txInt(unsigned int variable)
         aux_var = number(aux_var, 1);
     }
     if (variable >= 10 && variable < 100) {
-       
+
 
         aux_var = number(aux_var, 10);
         aux_var = number(aux_var, 1);
@@ -395,57 +437,52 @@ void txInt(unsigned int variable)
     }
 }
 
-void txFloat(float variable)
-{
+void txFloat(float variable) {
     float f2;
     int d1, d2;
-    d1 = (int)variable;
+    d1 = (int) variable;
     f2 = variable - d1;
     d2 = (f2 * 1000);
-    txInt((unsigned int)d1);
+    txInt((unsigned int) d1);
     txChar('.');
-    txInt((unsigned int)d2);
+    txInt((unsigned int) d2);
     txInt(d2);
 }
 
-unsigned int number(unsigned int y, unsigned int operator)
-{
-    while (U2STAbits.UTXBF){
-         //Waits until buffer is full
+unsigned int number(unsigned int y, unsigned int operator) {
+    while (U2STAbits.UTXBF) {
+        //Waits until buffer is full
     }
-        
+
     U2TXREG = (y / operator) + 48;
     y = (y % operator);
     return y;
 }
 
-void txChar(char txChar)
-{
-    while (U2STAbits.UTXBF){
+void txChar(char txChar) {
+    while (U2STAbits.UTXBF) {
         //waits until buffer is full
     }
-     
+
     U2TXREG = txChar;
 }
 
-void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput)
-{
-    print_header(Message1, sizeof(Message1));
+void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput) {
+    print_header(Message1, sizeof (Message1));
     txFloat(average_voltagePhotovoltaic);
     txChar('V');
-    print_header(Message2, sizeof(Message2));
+    print_header(Message2, sizeof (Message2));
     txFloat(average_currentPhotovoltaic);
     txChar('A');
-    print_header(Message3, sizeof(Message3));
+    print_header(Message3, sizeof (Message3));
     txFloat(duty / (2 * 3.015));
     txChar('%');
-    print_header(Message4, sizeof(Message4));
+    print_header(Message4, sizeof (Message4));
     txFloat(average_voltageOutput);
     txChar('V');
 }
 
-void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty)
-{
+void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty) {
     txFloat(average_voltagePhotovoltaic);
     txChar(';');
     txFloat(average_currentPhotovoltaic);
@@ -455,23 +492,20 @@ void print_data_parsing(float average_voltagePhotovoltaic, float average_current
     txFloat(average_voltageOutput);
     txChar(';');
     txFloat(duty / (2 * 3.015));
+    txChar('\n');
 }
 
-
-void print_header(char* msg, int count)
-{
+void print_header(char* msg, int count) {
     for (n = 0; n < (count - 1); n++) {
-        while (U2STAbits.UTXBF){
+        while (U2STAbits.UTXBF) {
             // do nothing
         }
-         //Waits until buffer is full
         U2TXREG = msg[n];
     }
 }
 
-float filter_250hz(float input_value, int filter_number)
-{
-    //Filtro a 200Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+float filter_250hz(float input_value, int filter_number) {
+    //Filtro a 250Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
@@ -485,9 +519,8 @@ float filter_250hz(float input_value, int filter_number)
     return value_filt[filter_number];
 }
 
-float filter_10hz(float input_value, int filter_number)
-{
-    //Filtro a 200Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+float filter_10hz(float input_value, int filter_number) {
+    //Filtro a 10Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
@@ -502,108 +535,137 @@ float filter_10hz(float input_value, int filter_number)
     return value_filt[filter_number];
 }
 
+float filter_1hz(float input_value, int filter_number) {
+    //Filtro a 0.1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
-void SysInit(void){
-            
-    
+    //A1 = 1
+    //A2 = -0,999371878778719
+    //B1 = 0.003131764229193
+    //B2 = 0.003131764229193
+    //value_filt[filter_number] = ( (B1*input_value + B2*value_ant1[filter_number] - A2*value_filt_ant1[filter_number]));
+
+    value_filt[filter_number] = ((0.003131764229193 * input_value + 0.003131764229193 * value_ant1[filter_number] + 0.993736471541615 * value_filt_ant1[filter_number]));
+    value_ant1[filter_number] = input_value;
+    value_filt_ant1[filter_number] = value_filt[filter_number];
+    return value_filt[filter_number];
+}
+
+
+float filter_01hz(float input_value, int filter_number) {
+    //Filtro a 0.1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
+
+    //A1 = 1
+    //A2 = -0,999371878778719
+    //B1 = 0.0003140606106404320
+    //B2 = 0.0003140606106404320
+    //value_filt[filter_number] = ( (B1*input_value + B2*value_ant1[filter_number] - A2*value_filt_ant1[filter_number]));
+
+    value_filt[filter_number] = ((0.0003140606106404320 * input_value + 0.0003140606106404320 * value_ant1[filter_number] + 0.999371878778719 * value_filt_ant1[filter_number]));
+    value_ant1[filter_number] = input_value;
+    value_filt_ant1[filter_number] = value_filt[filter_number];
+    return value_filt[filter_number];
+}
+
+void SysInit(void) {
+
+
     set_duty_cycle(0);
-    if (DCBUS_flag == DCBUS_OK){
-        unlock_count ++;
-    }    
-    else{
+    if (DCBUS_flag == DCBUS_OK) {
+        unlock_count++;
+    } else {
         unlock_count = 0;
     }
-    
-    if (unlock_count >= 500 && serial_com == 1){
+
+    if (unlock_count >= 500 && serial_com == 1) {
         unlock_count = 0;
         System_state = STATE_ON;
     }
 }
 
-void TaskHandler(void)
-{
-	switch (System_state) {
-		case STATE_INITIAL:
-		{
-			SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
-		}
-		break;
+void TaskHandler(void) {
+    switch (System_state) {
+        case STATE_INITIAL:
+        {
+            SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
+            set_duty_cycle(0.5);
+        }
+            break;
 
-		case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
-		{ 
+        case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
+        {
             turn_on();
             System_state = STATE_IDLE_ON;
-		}
-		break;
-		
-		case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
-		{
+        }
+            break;
+
+        case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
+        {
             turn_off();
             System_state = STATE_IDLE_OFF;
-		}
-		break;
+        }
+            break;
 
-		case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
-		{
+        case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
+        {
             turn_off();
             System_state = STATE_LOCKED_IDLE;
-		}
-        
+        }
+
         case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
-		{
-			DCBUS_lock();
-         
-		}break;
-        
-		break;
-        
+        {
+            DCBUS_lock();
+
+        }
+            break;
+
+            break;
+
         case STATE_IDLE_ON: //Não faz nada
-		{
-          //  LATBbits.LATB8 = 0;
-		}
-		break;
-        
+        {
+            //  LATBbits.LATB8 = 0;
+        }
+            break;
+
         case STATE_IDLE_OFF: //Não faz nada
-		{
-          //   LATBbits.LATB8 = 1;
-		}
-		break;
-        
-		default:
-		break;
-	}
+        {
+            //   LATBbits.LATB8 = 1;
+        }
+            break;
+
+        default:
+            break;
+    }
 }
 
-int main()
-{
+int main() {
     TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input    
     _LATD1 = 1;
-    LATBbits.LATB8 = 1;    
-    
+    LATBbits.LATB8 = 1;
+
     set_duty_cycle(0);
 
     configure_pins();
     init_filters();
 
     while (1) {
-        if (taskHander_runflag == 1){
+        if (taskHander_runflag == 1) {
             TaskHandler();
             taskHander_runflag = 0;
-        }   
+        }
         Serial_monitor();
 
     }
 
     return 0;
-     
+
 }
 
+void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
 
-void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
-{
-   
     _T1IF = 0; // Clear Timer 1 interrupt flag
-    
+
     /****************************************/
     /*************  ACQUISITION  ************/
     //Reads de current from the PV panel (IPV)
@@ -615,41 +677,38 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     analog_voltagePhotovoltaic = readAnalogChannel(1);
     v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;\
     voltagePhotovoltaic = v1 * AT_PV;
-    
+
     // Reads the output voltage (VDC)
     analog_voltageOutput = readAnalogChannel(2);
     v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
     voltageOutput = (v2 * AT_VDC * 0.981 + 5.89);
-    
+
     // Filters
-    voltagePV_filtered = filter_10hz(voltagePhotovoltaic, 0);
-    currentPV_filtered = filter_10hz(currentPhotovoltaic, 1);
-    voltageDCBUS_filtered = filter_10hz(voltageOutput, 2);
+    voltagePV_filtered_10Hz = filter_10hz(voltagePhotovoltaic, 0);
+    currentPV_filtered_10Hz = filter_10hz(currentPhotovoltaic, 1);
+    voltageDCBUS_filtered_10Hz = filter_10hz(voltageOutput, 2);
     /*************  ACQUISITION  ************/
     /****************************************/
 
     /******************************************/
     /*************  DC PROTECTION  ************/
     /******** 250HZ filter + overvoltage and undervoltage protection - Vdc Min. = X; Vdc Max. = X ********/
-    voltagePV_filtered250 = filter_250hz(voltagePhotovoltaic, 3);
-    currentPV_filtered250 = filter_250hz(currentPhotovoltaic, 4);
-    voltageDCBUS_filtered250 = filter_250hz(voltageOutput, 5);
-    power_PV = currentPV_filtered250 * currentPV_filtered;
-    
-    if ((voltageDCBUS_filtered250 > VDC_MIN && voltageDCBUS_filtered250 < VDC_MAX))
-    {
-        DCBUS_flag = DCBUS_OK;
-    }
-    
-    else{
+    voltagePV_filtered_250Hz = filter_250hz(voltagePhotovoltaic, 3);
+    currentPV_filtered_250Hz = filter_250hz(currentPhotovoltaic, 4);
+    voltageDCBUS_filtered_250Hz = filter_250hz(voltageOutput, 5);
+    power_PV = voltagePV_filtered_10Hz * currentPV_filtered_10Hz;
 
-        if ((System_state =! STATE_INITIAL) || (System_state =! STATE_LOCKED) || (System_state =! STATE_LOCKED_IDLE)){
+    if ((voltageDCBUS_filtered_250Hz > VDC_MIN && voltageDCBUS_filtered_250Hz < VDC_MAX)) {
+        DCBUS_flag = DCBUS_OK;
+    } else {
+
+        if ((System_state = !STATE_INITIAL) || (System_state = !STATE_LOCKED) || (System_state = !STATE_LOCKED_IDLE)) {
             System_state = STATE_LOCKED;
-           // txFloat(voltageOutput);
-          //  turn_off();
-        }          
+            // txFloat(voltageOutput);
+            //  turn_off();
+        }
         DCBUS_flag = DCBUS_NOK;
-        
+
     }
     /*************  DC PROTECTION  ************/
     /******************************************/
@@ -658,21 +717,20 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void)
     /*************  MPPT  ************/
     //TODO: ver se o else não inclui "ifs" em que o mppt é maior que 100
     if ((mppt_counter >= 100) && (System_state == STATE_IDLE_ON)) {
-               //__delay32(10000); //Random delay
-        run_mppt(voltagePV_filtered, voltagePV_filtered_ant, currentPV_filtered, currentPV_filtered_ant);
+        //__delay32(10000); //Random delay
+        run_mppt(voltagePV_filtered_10Hz, voltagePV_filtered_ant, currentPV_filtered_10Hz, currentPV_filtered_ant);
         mppt_counter = 0;
-        voltagePV_filtered_ant = voltagePV_filtered;
-        currentPV_filtered_ant = currentPV_filtered;
-    }
-    else {
+        voltagePV_filtered_ant = voltagePV_filtered_10Hz;
+        currentPV_filtered_ant = currentPV_filtered_10Hz;
+    } else {
         mppt_counter++;
     }
     /*************  MPPT  ************/
     /*********************************/
-    
+
     updateCommCounter();
-       
+
     taskHander_runflag = 1;
-    
+
     //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
 }

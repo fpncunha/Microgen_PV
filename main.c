@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+/***************************************/
+/********* Configuration bits **********/
 // FOSC
 #pragma config FPR = FRC_PLL16          // Primary Oscillator Mode (FRC w/ PLL 16x)
 #pragma config FCKSMEN = CSW_FSCM_OFF   // Clock Switching and Monitor (Sw Disabled, Mon Disabled)
@@ -15,25 +18,30 @@
 #pragma config FPWRT = PWRT_OFF         // POR Timer Value (Timer Disabled)
 #pragma config BODENV = BORV27          // Brown Out Voltage (2.7V)
 #pragma config MCLRE = MCLR_EN          // Master Clear Enable (Enabled)
+/****************************************/
+/****************************************/
 
 
+/***************************************/
+/************ Definitions **************/
 #define AD_FS 5 //Full-scale ADC voltage
 #define AD16Bit_FS 65535 //16bit resulution - 2^16
 #define HY15P_IN 15 //HY15-P transducer nominal current
 #define HY15P_VN 4 //HY15-P transducer max. output voltage (+-4V)
 #define AT_PV 12 //PV gain
 #define AT_VDC 101 //Vdc gain
-#define NUM_FILTERS 6 //Number of filters used
+#define NUM_FILTERS 7 //Number of filters used
 #define VDC_MIN 340  //DC BUS Threshold lower limit
 #define VDC_MAX 440 //DC BUS Threshold upper limit
 #define DCBUS_OK 0 //DC BUS OK flag VDC > VDC_MIN && VDC < VDC_MAX
 #define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
+/***************************************/
+/***************************************/
 
 
 /*******************************************/
 /***********  Function Headers *************/
-
-void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void); // 1Khz interrupt 
+void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void); // 1Khz interrupt
 void configure_pins();
 void set_duty_cycle(float duty);
 unsigned intreadAnalogChannel(int n);
@@ -41,7 +49,7 @@ void txInt(unsigned int variable);
 void txFloat(float variable);
 void txChar(char caracter);
 unsigned int number(unsigned int y, unsigned int operator);
-void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput);
+void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
 void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
 void print_header(char* msg, int count);
 float filter_250hz(float input_value, int filter_number);
@@ -62,24 +70,22 @@ void TaskCommBroadcast(void);
 void TaskCommBroadcast_parsing(void);
 void toggleCommBroadcast(void);
 void toggleCommBroadcast_parsing(void);
-
-/**********  Function Headers *************/
+/*******************************************/
 /*******************************************/
 
 
 /******************************/
-
 /*******  STATE MACHINE *******/
 typedef enum SystemState_t {
-    STATE_INITIAL, //INITIAL STATE 
-    STATE_OFF, //TURN OFF STATE 
+    STATE_INITIAL, //INITIAL STATE
+    STATE_OFF, //TURN OFF STATE
     STATE_ON, //TURN ON STATE
     STATE_LOCKED, //VDC LOCK STATE (DCBUS_NOK DETECTED)
     STATE_IDLE_OFF, //OFF STATE
     STATE_IDLE_ON, //ON STATE
     STATE_LOCKED_IDLE, //LOCKED STATE (UNTIL DCBUS_OK)
 } SystemState_t;
-/*******  STATE MACHINE *******/
+/******************************/
 /******************************/
 
 
@@ -97,17 +103,19 @@ volatile SystemState_t System_state = STATE_INITIAL;
 int taskHander_runflag = 0; //taskHander flag - synchronize state machine with the main 1kHz interrupt
 int taskCommBroadcast_runflag = 0; //broadcast to USART
 int taskCommBroadcast_parsing_runflag = 0;
-/********** Variables *************/
+float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
+float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput, PowerPV;
+long clockFrequency = 30000000; // 30MHz serial_cmd clock
+/********************************************/
 /********************************************/
 
 
 
-/*******************************************/
-/********** Filters' variables *************/
+/******************************************/
+/********** Filters' variables ************/
 float value_ant1[NUM_FILTERS];
 float value_filt_ant1[NUM_FILTERS];
 float value_filt[NUM_FILTERS];
-
 
 float voltagePV_filtered_01Hz = 0;
 float currentPV_filtered_01Hz = 0;
@@ -132,17 +140,8 @@ float powerPV_filtered_250Hz = 0;
 float voltagePV_filtered_ant = 0;
 float currentPV_filtered_ant = 0;
 float powerPV_filtered_ant = 0;
-
-float power_PV = 0;
-
-
-/********** Filters' variables *************/
-/*******************************************/
-
-
-float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
-float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput;
-long clockFrequency = 30000000; // 30MHz serial_cmd clock
+/******************************************/
+/******************************************/
 
 
 /*******************************************/
@@ -154,13 +153,16 @@ char MessageB[] = "\n R-Read Data";
 char Message2[] = "\n I_PV=";
 char Message3[] = "\n Duty=";
 char Message4[] = "\n V_out=";
+char Message5[] = "\n Power=";
 char Message7[] = "\n ***System ON*** \n";
 char Message8[] = "\n ***System OFF*** \n";
 char MessageX[] = "\nDUTY";
 int n;
-/************* Serial Com. ****************/
-
 /*******************************************/
+/*******************************************/
+
+
+
 void updateCommCounter(void) {
     if (comm_counter >= 1000 && toggle_broadcast_aux == 1) {
         TaskCommBroadcast();
@@ -188,21 +190,19 @@ void toggleCommBroadcast_parsing(void) {
 /*******************************************/
 void TaskCommBroadcast(void) {
     if (taskCommBroadcast_runflag == 1) {
-        //print_data_parsing(voltageDCBUS_filtered250, currentPV_filtered10, power_PV, voltageDCBUS_filtered10, PDC1);
-        print_data(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, PDC1, voltageDCBUS_filtered_10Hz);
-        //taskCommBroadcast_runflag = 0;
+        print_data(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
     }
 }
 
 void TaskCommBroadcast_parsing(void) {
     if (taskCommBroadcast_parsing_runflag == 1) {
-        print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, power_PV, voltageDCBUS_filtered_10Hz, PDC1);
-        //taskCommBroadcast_runflag = 0;
+        print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
     }
 }
 /************* Serial Com. ****************/
-
 /*******************************************/
+
+
 void init_filters(void) {
     int aux_i = 0;
     for (aux_i = 0; aux_i < NUM_FILTERS; aux_i++) {
@@ -244,7 +244,7 @@ void Serial_monitor(void) {
             //  taskHander_runflag = 1;
         }
         if (y == 'r' || y == 'R') {
-            //taskCommBroadcast_runflag = 1;              
+            //taskCommBroadcast_runflag = 1;
         }
         if (y == 'b' || y == 'B') {
             toggle_broadcast_aux = 1;
@@ -262,7 +262,7 @@ void Serial_monitor(void) {
 
 void turn_on(void) {
     _LATD2 = 1;
-    _LATD3 = 1; //reset
+    _LATD3 = 1; //Reset
     __delay32(0.5 * clockFrequency);
     _LATD3 = 0;
 }
@@ -287,9 +287,7 @@ void DCBUS_lock(void) {
 
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant) {
     float dI, dV;
-    float dutyMax =
-
-            0.9;
+    float dutyMax = 0.9;
     float dutyMin = 0.5;
 
     float dutyStep = 0.002;
@@ -350,7 +348,7 @@ void configure_pins() {
     TRISB = 0x01FF; //Ports B are inputs
     //TRISBbits.TRISB8 = 0; //Debug only - Pin B8 is configured as output
 
-    // Configure TIMER1 
+    // Configure TIMER1
     // Timer1 = PR1 * PRESCALER * (1/Fclk) = 3685*8*(1/30000000) = 1ms = 1kHz //
     T1CON = 0; //Clear Timer 1 configuration
     T1CONbits.TCKPS = 1; //Set timer 1 prescaler (0=1:1, 1=1:8, 2=1:64, 3=1:256)
@@ -384,7 +382,7 @@ void configure_pins() {
     _PTEN = 1; //Enable PWM time base
 
     //Serial Port
-    //8 data bits, 1 stop bit, no parity bit 
+    //8 data bits, 1 stop bit, no parity bit
     U2BRG = 97; //Baudrate = 19200 bits per second
     U2MODEbits.UARTEN = 1;
     U2STAbits.UTXISEL = 1;
@@ -399,7 +397,7 @@ unsigned int readAnalogChannel(int channel) {
     __delay32(1);
     ADCON1bits.SAMP = 0;
     while (!ADCON1bits.DONE) {
-        // do nothing
+        // Do nothing
     }
     return ADCBUF0;
 }
@@ -426,11 +424,8 @@ void txInt(unsigned int variable) {
         aux_var = number(aux_var, 1);
     }
     if (variable >= 10 && variable < 100) {
-
-
         aux_var = number(aux_var, 10);
         aux_var = number(aux_var, 1);
-
     }
     if (variable < 10) {
         aux_var = number(aux_var, 1);
@@ -467,19 +462,22 @@ void txChar(char txChar) {
     U2TXREG = txChar;
 }
 
-void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, unsigned int duty, float average_voltageOutput) {
+void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty) {
     print_header(Message1, sizeof (Message1));
     txFloat(average_voltagePhotovoltaic);
     txChar('V');
     print_header(Message2, sizeof (Message2));
     txFloat(average_currentPhotovoltaic);
     txChar('A');
-    print_header(Message3, sizeof (Message3));
-    txFloat(duty / (2 * 3.015));
-    txChar('%');
+    print_header(Message5, sizeof (Message5));
+    txFloat(average_PowerPhotovoltaic);
+    txChar('W');
     print_header(Message4, sizeof (Message4));
     txFloat(average_voltageOutput);
     txChar('V');
+    print_header(Message3, sizeof (Message3));
+    txFloat(duty / (2 * 3.015));
+    txChar('%');
 }
 
 void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty) {
@@ -536,11 +534,11 @@ float filter_10hz(float input_value, int filter_number) {
 }
 
 float filter_1hz(float input_value, int filter_number) {
-    //Filtro a 0.1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Filtro a 1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
-    //A2 = -0,999371878778719
+    //A2 = -0.993736471541615
     //B1 = 0.003131764229193
     //B2 = 0.003131764229193
     //value_filt[filter_number] = ( (B1*input_value + B2*value_ant1[filter_number] - A2*value_filt_ant1[filter_number]));
@@ -570,7 +568,6 @@ float filter_01hz(float input_value, int filter_number) {
 
 void SysInit(void) {
 
-
     set_duty_cycle(0);
     if (DCBUS_flag == DCBUS_OK) {
         unlock_count++;
@@ -586,64 +583,61 @@ void SysInit(void) {
 
 void TaskHandler(void) {
     switch (System_state) {
-        case STATE_INITIAL:
-        {
-            SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
-            set_duty_cycle(0.5);
-        }
-            break;
+    case STATE_INITIAL:
+    {
+        SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
+        set_duty_cycle(0.5);
+    }
+    break;
 
-        case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
-        {
-            turn_on();
-            System_state = STATE_IDLE_ON;
-        }
-            break;
+    case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
+    {
+        turn_on();
+        System_state = STATE_IDLE_ON;
+    }
+    break;
 
-        case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
-        {
-            turn_off();
-            System_state = STATE_IDLE_OFF;
-        }
-            break;
+    case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
+    {
+        turn_off();
+        System_state = STATE_IDLE_OFF;
+    }
+    break;
 
-        case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
-        {
-            turn_off();
-            System_state = STATE_LOCKED_IDLE;
-        }
+    case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
+    {
+        turn_off();
+        System_state = STATE_LOCKED_IDLE;
+    }
 
-        case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
-        {
-            DCBUS_lock();
+    case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
+    {
+        DCBUS_lock();
 
-        }
-            break;
+    }
+    break;
 
-            break;
+    break;
 
-        case STATE_IDLE_ON: //Não faz nada
-        {
-            //  LATBbits.LATB8 = 0;
-        }
-            break;
+    case STATE_IDLE_ON: //Não faz nada
+    {
+    }
+    break;
 
-        case STATE_IDLE_OFF: //Não faz nada
-        {
-            //   LATBbits.LATB8 = 1;
-        }
-            break;
+    case STATE_IDLE_OFF: //Não faz nada
+    {
+    }
+    break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 
 int main() {
-    TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input    
+    TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input
     _LATD1 = 1;
     LATBbits.LATB8 = 1;
-
     set_duty_cycle(0);
 
     configure_pins();
@@ -675,13 +669,16 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
 
     //Reads the voltage from de photovoltaic panel (VPV)
     analog_voltagePhotovoltaic = readAnalogChannel(1);
-    v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;\
+    v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;
+    \
     voltagePhotovoltaic = v1 * AT_PV;
 
     // Reads the output voltage (VDC)
     analog_voltageOutput = readAnalogChannel(2);
     v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
     voltageOutput = (v2 * AT_VDC * 0.981 + 5.89);
+
+    PowerPV = currentPhotovoltaic * voltagePhotovoltaic;
 
     // Filters
     voltagePV_filtered_10Hz = filter_10hz(voltagePhotovoltaic, 0);
@@ -696,7 +693,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     voltagePV_filtered_250Hz = filter_250hz(voltagePhotovoltaic, 3);
     currentPV_filtered_250Hz = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered_250Hz = filter_250hz(voltageOutput, 5);
-    power_PV = voltagePV_filtered_10Hz * currentPV_filtered_10Hz;
+    powerPV_filtered_01Hz = filter_01hz(PowerPV,6);
 
     if ((voltageDCBUS_filtered_250Hz > VDC_MIN && voltageDCBUS_filtered_250Hz < VDC_MAX)) {
         DCBUS_flag = DCBUS_OK;
@@ -729,7 +726,6 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     /*********************************/
 
     updateCommCounter();
-
     taskHander_runflag = 1;
 
     //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin

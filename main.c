@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "microgGen_serial.h"
+#include "microgen.h"
+
 
 _FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
 _FWDT(WDT_OFF); // Watchdog off
@@ -22,6 +25,18 @@ _FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off t
 #define VDC_MAX 440 //DC BUS Threshold upper limit
 #define DCBUS_OK 0 //DC BUS OK flag VDC > VDC_MIN && VDC < VDC_MAX
 #define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
+
+#define PROTOCOL_ENA 1
+#define PROTOCOL_DIS 0
+#define SERIAL_PROTOCOL PROTOCOL_ENA
+
+#define START_MSG 0   //first  # 
+#define MSG_DATA  1   //second #
+#define CRC_DATA  2   //third  #
+
+#define CRC_ERROR "CRC_ERROR"
+#define NOT_DEF   "NOT_DEF"
+#define CRC_NUM   "CRC_NUM"
 /***************************************/
 /***************************************/
 
@@ -57,6 +72,7 @@ void TaskCommBroadcast(void);
 void TaskCommBroadcast_parsing(void);
 void toggleCommBroadcast(void);
 void toggleCommBroadcast_parsing(void);
+void synchronizeCommData(void);
 /*******************************************/
 /*******************************************/
 
@@ -81,6 +97,7 @@ typedef enum SystemState_t {
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
 int comm_counter = 0; //USART broadcast counter initialization (1s)
+int sync_counter = 0; //microgen sync counter initialization (1s)
 int DCBUS_flag = DCBUS_NOK;
 int unlock_count = 0;
 int serial_com = 1;
@@ -146,9 +163,21 @@ char Message8[] = "\n ***System OFF*** \n";
 char MessageX[] = "\nDUTY";
 int n;
 /*******************************************/
+/************* protocol ********************/
+//extern char receivedMessage[100];
+//boolean status_command;
+//extern int STATE_cardinal = 0;
+//extern int toSendCRC = 0, nbytes = 0, cnt = 0;
 /*******************************************/
-
-
+/*******************************************/
+void synchronizeCommData(void) {
+    pv2rpi_.DCBUS = (int) (10 * voltageDCBUS_filtered_10Hz);
+    pv2rpi_.VPV   = (int) (100 * voltagePV_filtered_10Hz);
+    pv2rpi_.IPV   = (int) (100 * currentPV_filtered_10Hz);
+    pv2rpi_.PWR   = (int) (10 * PDC1);
+            
+            //print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
+}
 
 void updateCommCounter(void) {
     if (comm_counter >= 1000 && toggle_broadcast_aux == 1) {
@@ -160,9 +189,17 @@ void updateCommCounter(void) {
     }
     else {
         comm_counter += 1;
-
-
     }
+    
+    if (sync_counter >= 1000) {
+        sync_counter=0;
+        synchronizeCommData();
+    }
+    else {
+        sync_counter += 1;
+    }
+
+    
 }
 
 void toggleCommBroadcast(void) {
@@ -206,44 +243,113 @@ void Serial_monitor(void) {
     int y = 0;
 
     if (U2STAbits.URXDA == 1) { //Checks if received a character
-        y = U2RXREG; //Y = received character
-        if (y == '1' && DCBUS_flag == DCBUS_OK) {
-            toggle_broadcast_parsing_aux = 0;
-            toggle_broadcast_aux = 0;
-            serial_com = 1;
-            System_state = STATE_ON;
-            //taskHander_runflag = 1;
+       
+        if(SERIAL_PROTOCOL == PROTOCOL_DIS) {
+             y = U2RXREG; //Y = received character
+            if (y == '1' && DCBUS_flag == DCBUS_OK) {
+                toggle_broadcast_parsing_aux = 0;
+                toggle_broadcast_aux = 0;
+                serial_com = 1;
+                System_state = STATE_ON;
+                //taskHander_runflag = 1;
+            }
+
+            if (y == '1' && DCBUS_flag == DCBUS_NOK) {
+                toggle_broadcast_parsing_aux = 0;
+                toggle_broadcast_aux = 0;
+                serial_com = 1;
+                System_state = STATE_LOCKED;
+                //taskHander_runflag = 1;
+            }
+
+            if ((y == '0')) {
+                toggle_broadcast_parsing_aux = 0;
+                toggle_broadcast_aux = 0;
+                serial_com = 0;
+                System_state = STATE_OFF;
+                //  taskHander_runflag = 1;
+            }
+            if (y == 'r' || y == 'R') {
+                //taskCommBroadcast_runflag = 1;
+            }
+            if (y == 'b' || y == 'B') {
+                toggle_broadcast_aux = 1;
+                toggle_broadcast_parsing_aux = 0;
+                toggleCommBroadcast();
+            }
+            if (y == 'e' || y == 'E') {
+                toggle_broadcast_parsing_aux = 1;
+                toggle_broadcast_aux = 0;
+                toggleCommBroadcast_parsing();
+
+            }
+        }  //*** end of protocol DISABLE***///
+        else {
+            
+            receivedMessage[nbytes] = U2RXREG;
+            if(receivedMessage[nbytes]=='#'){
+                //START STATE MACHINE TO PROCESS INCOMING BUFFER
+
+              if(STATE_cardinal==START_MSG)         //START MESSAGE
+              {
+                STATE_cardinal = MSG_DATA;
+                receivedMessage[nbytes]='\0';
+              }
+              else if(STATE_cardinal==MSG_DATA)       //MESSAGE DATA
+              {
+                STATE_cardinal = CRC_DATA;
+                receivedMessage[nbytes]='\0';
+                cnt=10;
+
+              }
+              else if(STATE_cardinal==CRC_DATA)       //CRC DATA
+              {
+
+                if(nbytes == toSendCRC)
+                {
+                  receivedMessage[nbytes]='\0';
+                        //setMessage(mensagem);
+                
+                manageMessage();
+                
+                return;
+                  // manage_message();
+                }
+                else
+                {
+                  strcpy(receivedMessage, CRC_ERROR);
+                  nbytes=strlen(CRC_ERROR);
+                  receivedMessage[nbytes]='\0';
+
+                  //microGen_serial.setMessage(mensagem);
+             //     manageMessage();
+                return;
+                
+                }
+              }
+            }
+            else if(STATE_cardinal==MSG_DATA)
+            {
+              //check if is a command with value
+              if(receivedMessage[nbytes]=='{') {
+                  //nop
+                  // enableCommand();
+              }
+               
+
+              nbytes++;
+            }
+
+            else if(STATE_cardinal==CRC_DATA)
+            {
+
+              toSendCRC+=(receivedMessage[nbytes]-48)*cnt;
+              cnt/=10;
+
+            }
+          return;
         }
 
-        if (y == '1' && DCBUS_flag == DCBUS_NOK) {
-            toggle_broadcast_parsing_aux = 0;
-            toggle_broadcast_aux = 0;
-            serial_com = 1;
-            System_state = STATE_LOCKED;
-            //taskHander_runflag = 1;
-        }
-
-        if ((y == '0')) {
-            toggle_broadcast_parsing_aux = 0;
-            toggle_broadcast_aux = 0;
-            serial_com = 0;
-            System_state = STATE_OFF;
-            //  taskHander_runflag = 1;
-        }
-        if (y == 'r' || y == 'R') {
-            //taskCommBroadcast_runflag = 1;
-        }
-        if (y == 'b' || y == 'B') {
-            toggle_broadcast_aux = 1;
-            toggle_broadcast_parsing_aux = 0;
-            toggleCommBroadcast();
-        }
-        if (y == 'e' || y == 'E') {
-            toggle_broadcast_parsing_aux = 1;
-            toggle_broadcast_aux = 0;
-            toggleCommBroadcast_parsing();
-
-        }
     }
 }
 
@@ -370,7 +476,7 @@ void configure_pins() {
 
     //Serial Port
     //8 data bits, 1 stop bit, no parity bit
-    U2BRG = 97; //Baudrate = 19200 bits per second
+    U2BRG = 32;//97; //Baudrate = 19200 bits per second
     U2MODEbits.UARTEN = 1;
     U2STAbits.UTXISEL = 1;
     U2STAbits.UTXEN = 1;

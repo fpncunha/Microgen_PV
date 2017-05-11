@@ -1,2 +1,4 @@
 build/XC16_dsPIC30F4011/production/main.o:  \
-main.c 
+main.c  \
+microgGen_serial.h  \
+ microgen.h 

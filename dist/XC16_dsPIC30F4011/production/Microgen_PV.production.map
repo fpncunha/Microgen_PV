@@ -562,14 +562,17 @@ __FUID2
 __FUID3
  *(__FUID3.sec*)
 
-__FOSC
+__FOSC            0xf80000          0x2
  *(__FOSC.sec*)
+ __FOSC.sec       0xf80000          0x2 build/XC16_dsPIC30F4011/production/main.o
 
-__FWDT
+__FWDT            0xf80002          0x2
  *(__FWDT.sec*)
+ __FWDT.sec       0xf80002          0x2 build/XC16_dsPIC30F4011/production/main.o
 
-__FBORPOR
+__FBORPOR         0xf80004          0x2
  *(__FBORPOR.sec*)
+ __FBORPOR.sec    0xf80004          0x2 build/XC16_dsPIC30F4011/production/main.o
 
 __RESERVED1
  *(__RESERVED1.sec*)
@@ -592,24 +595,24 @@ userdata
 .comment
  *(.comment)
 
-.debug_info       0x000000       0x2731
+.debug_info       0x000000       0x2772
  *(.debug_info)
  .debug_info      0x000000         0xb5 build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_info      0x0000b5        0x10f build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_info      0x0001c4       0x2010 build/XC16_dsPIC30F4011/production/main.o
- .debug_info      0x0021d4        0x12e build/XC16_dsPIC30F4011/production/system.o
- .debug_info      0x002302        0x30f build/XC16_dsPIC30F4011/production/traps.o
- .debug_info      0x002611        0x120 build/XC16_dsPIC30F4011/production/user.o
+ .debug_info      0x0001c4       0x2051 build/XC16_dsPIC30F4011/production/main.o
+ .debug_info      0x002215        0x12e build/XC16_dsPIC30F4011/production/system.o
+ .debug_info      0x002343        0x30f build/XC16_dsPIC30F4011/production/traps.o
+ .debug_info      0x002652        0x120 build/XC16_dsPIC30F4011/production/user.o
  *(.gnu.linkonce.wi.*)
 
-.debug_abbrev     0x000000        0x31f
+.debug_abbrev     0x000000        0x330
  *(.debug_abbrev)
  .debug_abbrev    0x000000         0x1f build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_abbrev    0x00001f         0x1f build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_abbrev    0x00003e        0x1fc build/XC16_dsPIC30F4011/production/main.o
- .debug_abbrev    0x00023a         0x34 build/XC16_dsPIC30F4011/production/system.o
- .debug_abbrev    0x00026e         0x7d build/XC16_dsPIC30F4011/production/traps.o
- .debug_abbrev    0x0002eb         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_abbrev    0x00003e        0x20d build/XC16_dsPIC30F4011/production/main.o
+ .debug_abbrev    0x00024b         0x34 build/XC16_dsPIC30F4011/production/system.o
+ .debug_abbrev    0x00027f         0x7d build/XC16_dsPIC30F4011/production/traps.o
+ .debug_abbrev    0x0002fc         0x34 build/XC16_dsPIC30F4011/production/user.o
 
 .debug_line       0x000000        0x354
  *(.debug_line)
@@ -639,16 +642,16 @@ userdata
  *(.debug_macinfo)
 
 .debug_pubnames
-                  0x000000        0x7ae
+                  0x000000        0x7cf
  *(.debug_pubnames)
  .debug_pubnames
-                  0x000000        0x6a8 build/XC16_dsPIC30F4011/production/main.o
+                  0x000000        0x6c9 build/XC16_dsPIC30F4011/production/main.o
  .debug_pubnames
-                  0x0006a8         0x2a build/XC16_dsPIC30F4011/production/system.o
+                  0x0006c9         0x2a build/XC16_dsPIC30F4011/production/system.o
  .debug_pubnames
-                  0x0006d2         0xbe build/XC16_dsPIC30F4011/production/traps.o
+                  0x0006f3         0xbe build/XC16_dsPIC30F4011/production/traps.o
  .debug_pubnames
-                  0x000790         0x1e build/XC16_dsPIC30F4011/production/user.o
+                  0x0007b1         0x1e build/XC16_dsPIC30F4011/production/user.o
 
 .debug_ranges
  *(.debug_ranges)
@@ -1503,17 +1506,6 @@ __c30_signature
                     0x0947                  _Message7
                     0x095b                  _Message8
                     0x0970                  _MessageX
-
-.config_MCLRE     0xf80004          0x2
- .config_MCLRE    0xf80004          0x2 build/XC16_dsPIC30F4011/production/main.o
-
-.config_WDT       0xf80002          0x2
- .config_WDT      0xf80002          0x2 build/XC16_dsPIC30F4011/production/main.o
-
-.config_FCKSMEN
-                  0xf80000          0x2
- .config_FCKSMEN
-                  0xf80000          0x2 build/XC16_dsPIC30F4011/production/main.o
 
 .ivt._T1Interrupt
                   0x00001a          0x2

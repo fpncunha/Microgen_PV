@@ -5,22 +5,9 @@
 #include <string.h>
 
 
-/***************************************/
-/********* Configuration bits **********/
-// FOSC
-#pragma config FPR = FRC_PLL16          // Primary Oscillator Mode (FRC w/ PLL 16x)
-#pragma config FCKSMEN = CSW_FSCM_OFF   // Clock Switching and Monitor (Sw Disabled, Mon Disabled)
-
-// FWDT
-#pragma config WDT = WDT_OFF            // Watchdog Timer (Disabled)
-
-// FBORPOR
-#pragma config FPWRT = PWRT_OFF         // POR Timer Value (Timer Disabled)
-#pragma config BODENV = BORV27          // Brown Out Voltage (2.7V)
-#pragma config MCLRE = MCLR_EN          // Master Clear Enable (Enabled)
-/****************************************/
-/****************************************/
-
+_FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
+_FWDT(WDT_OFF); // Watchdog off
+_FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off the power-up timers
 
 /***************************************/
 /************ Definitions **************/
@@ -693,7 +680,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     voltagePV_filtered_250Hz = filter_250hz(voltagePhotovoltaic, 3);
     currentPV_filtered_250Hz = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered_250Hz = filter_250hz(voltageOutput, 5);
-    powerPV_filtered_01Hz = filter_01hz(PowerPV,6);
+    powerPV_filtered_01Hz = filter_1hz(PowerPV,6);
 
     if ((voltageDCBUS_filtered_250Hz > VDC_MIN && voltageDCBUS_filtered_250Hz < VDC_MAX)) {
         DCBUS_flag = DCBUS_OK;

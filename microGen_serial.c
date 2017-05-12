@@ -81,7 +81,7 @@ void manageMessage(void) {
   
   else if(strcmp(receivedMessage, "WHOIS")==0){
 
-  	serialwrite("#SOLAR2#06#\n", sizeof("#SOLAR1#06#\n"));   ///  !!! atenção: solar 10 numchar = 07; solar7 numchar 06
+  	serialwrite("#SOLAR7#06#\n", sizeof("#SOLAR1#06#\n"));   ///  !!! atenção: solar 10 numchar = 07; solar7 numchar 06
   	clearMessage();
    
 

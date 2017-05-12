@@ -171,10 +171,12 @@ int n;
 /*******************************************/
 /*******************************************/
 void synchronizeCommData(void) {
+    float powerPV;
     pv2rpi_.DCBUS = (int) (10 * voltageDCBUS_filtered_10Hz);
     pv2rpi_.VPV   = (int) (100 * voltagePV_filtered_10Hz);
     pv2rpi_.IPV   = (int) (100 * currentPV_filtered_10Hz);
-    pv2rpi_.PWR   = (int) (10 * PDC1);
+    powerPV = voltagePV_filtered_10Hz * currentPV_filtered_10Hz;
+    pv2rpi_.PWR   = (int) (10 * powerPV);
             
             //print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
 }

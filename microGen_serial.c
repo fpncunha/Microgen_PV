@@ -17,14 +17,19 @@ pv2rpi pv2rpi_;
 
 void serialwrite(char *message, int count) {
 
-	int n = 0;
+	int n = 0, i=0;
    //sizeof (message);
 	 for (n = 0; n < (count - 1); n++) {
         while (U2STAbits.UTXBF) {
             // do nothing
         }
+        
+        for(i=0; i<50; i++)
+        asm volatile("nop");
+        
         U2TXREG = message[n];
     }
+    
 }
 void serialwritechar(char byte) {
 
@@ -37,7 +42,7 @@ void serialwritechar(char byte) {
 }
 
 void manageMessage(void) {
-    
+    int i = 0;
   char msg[4];
   msg[0] = '\0';
   char com[5];
@@ -55,33 +60,39 @@ void manageMessage(void) {
 
   
   else if(strcmp(receivedMessage, "DCBUS")==0) {
-
-     float2strGain10( pv2rpi_.DCBUS);
+     
+     for(i=0; i<500; i++)
+      asm volatile("nop");
+     
+     float2str( pv2rpi_.DCBUS);
      clearMessage();
   }
 
   else if(strcmp(receivedMessage, "VPV")==0) {
-
-     float2strGain100( pv2rpi_.VPV);
+       for(i=0; i<500; i++)
+      asm volatile("nop");
+     float2str( pv2rpi_.VPV);
      clearMessage();
   }
 
   else if(strcmp(receivedMessage, "IPV")==0) {
-
-     float2strGain100( pv2rpi_.IPV);
+       for(i=0; i<500; i++)
+      asm volatile("nop");
+     float2str( pv2rpi_.IPV);
      clearMessage();
   }
 
   else if(strcmp(receivedMessage, "PWR")==0) {
-
-     float2strGain10( pv2rpi_.PWR);
+       for(i=0; i<500; i++)
+      asm volatile("nop");
+     float2str( pv2rpi_.PWR);
      clearMessage();
   }
 
   
   else if(strcmp(receivedMessage, "WHOIS")==0){
 
-  	serialwrite("#SOLAR7#06#\n", sizeof("#SOLAR1#06#\n"));   ///  !!! atenção: solar 10 numchar = 07; solar7 numchar 06
+  	serialwrite("#SOLAR3#06#\n", sizeof("#SOLAR1#06#\n"));   ///  !!! atenção: solar 10 numchar = 07; solar7 numchar 06
   	clearMessage();
    
 
@@ -186,10 +197,11 @@ void float2str(int num)
     crc[1] = (char)(nchar+48);
 
     serialwritechar('#');
-  	serialwrite(message, nchar);
+  	serialwrite(message, nchar+1);
   	serialwritechar('#');
   	serialwrite(crc, 3);
-  	serialwrite("#\n", 2);
+  	serialwritechar('#');
+    //serialwritechar('\0');
 
   	/*  Serial.write('#');
     Serial.print(message);

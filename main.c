@@ -26,17 +26,16 @@ _FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off t
 #define DCBUS_OK 0 //DC BUS OK flag VDC > VDC_MIN && VDC < VDC_MAX
 #define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
 
-#define PROTOCOL_ENA 1
-#define PROTOCOL_DIS 0
-#define SERIAL_PROTOCOL PROTOCOL_ENA
 
-#define START_MSG 0   //first  # 
-#define MSG_DATA  1   //second #
-#define CRC_DATA  2   //third  #
+
+//#define START_MSG 0   //first  # 
+//#define MSG_DATA  1   //second #
+//#define CRC_DATA  2   //third  #
 
 #define CRC_ERROR "CRC_ERROR"
 #define NOT_DEF   "NOT_DEF"
 #define CRC_NUM   "CRC_NUM"
+#define TIMEOUT_PROTOCOL   1500
 /***************************************/
 /***************************************/
 
@@ -78,6 +77,7 @@ void synchronizeCommData(void);
 
 
 /******************************/
+
 /*******  STATE MACHINE *******/
 typedef enum SystemState_t {
     STATE_INITIAL, //INITIAL STATE
@@ -90,6 +90,17 @@ typedef enum SystemState_t {
 } SystemState_t;
 /******************************/
 /******************************/
+
+/*******  STATE MACHINE *******/
+typedef enum Microgen_state_t {
+    START_MSG, //INITIAL STATE
+    MSG_DATA, //TURN OFF STATE
+    CRC_DATA, //TURN ON STATE
+    
+} Microgen_state_t;
+/******************************/
+/******************************/
+
 
 
 /********************************************/
@@ -107,6 +118,9 @@ volatile SystemState_t System_state = STATE_INITIAL;
 int taskHander_runflag = 0; //taskHander flag - synchronize state machine with the main 1kHz interrupt
 int taskCommBroadcast_runflag = 0; //broadcast to USART
 int taskCommBroadcast_parsing_runflag = 0;
+int timeoutProtocol = 0;
+volatile Microgen_state_t Microgen_state = START_MSG;
+
 float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
 float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput, PowerPV;
 long clockFrequency = 30000000; // 30MHz serial_cmd clock
@@ -169,16 +183,17 @@ int n;
 //extern int STATE_cardinal = 0;
 //extern int toSendCRC = 0, nbytes = 0, cnt = 0;
 /*******************************************/
+
 /*******************************************/
 void synchronizeCommData(void) {
     float powerPV;
     pv2rpi_.DCBUS = (int) (10 * voltageDCBUS_filtered_10Hz);
-    pv2rpi_.VPV   = (int) (10 * voltagePV_filtered_10Hz);
-    pv2rpi_.IPV   = (int) (10 * currentPV_filtered_10Hz);
+    pv2rpi_.VPV = (int) (10 * voltagePV_filtered_10Hz);
+    pv2rpi_.IPV = (int) (10 * currentPV_filtered_10Hz);
     powerPV = voltagePV_filtered_10Hz * currentPV_filtered_10Hz;
-    pv2rpi_.PWR   = (int) (10 * powerPV);
-            
-            //print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
+    pv2rpi_.PWR = (int) (10 * powerPV);
+
+    //print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
 }
 
 void updateCommCounter(void) {
@@ -188,20 +203,18 @@ void updateCommCounter(void) {
     } else if (comm_counter >= 1000 && toggle_broadcast_parsing_aux == 1) {
         TaskCommBroadcast_parsing();
         comm_counter = 0;
-    }
-    else {
+    } else {
         comm_counter += 1;
     }
-    
+
     if (sync_counter >= 1000) {
-        sync_counter=0;
+        sync_counter = 0;
         synchronizeCommData();
-    }
-    else {
+    } else {
         sync_counter += 1;
     }
 
-    
+
 }
 
 void toggleCommBroadcast(void) {
@@ -226,6 +239,7 @@ void TaskCommBroadcast_parsing(void) {
     }
 }
 /************* Serial Com. ****************/
+
 /*******************************************/
 
 
@@ -243,11 +257,14 @@ void init_filters(void) {
 void Serial_monitor(void) {
 
     int y = 0;
+    
+    char receivedByte = 0;
+    int i = 0;
 
     if (U2STAbits.URXDA == 1) { //Checks if received a character
-       
-        if(SERIAL_PROTOCOL == PROTOCOL_DIS) {
-             y = U2RXREG; //Y = received character
+
+        if (commStatus == PROTOCOL_DIS) {
+            y = U2RXREG; //Y = received character
             if (y == '1' && DCBUS_flag == DCBUS_OK) {
                 toggle_broadcast_parsing_aux = 0;
                 toggle_broadcast_aux = 0;
@@ -285,72 +302,121 @@ void Serial_monitor(void) {
                 toggleCommBroadcast_parsing();
 
             }
-        }  //*** end of protocol DISABLE***///
+            if (y == 'p' || y == 'P') {
+                commStatus = PROTOCOL_ENA;
+                toggle_broadcast_parsing_aux = 0;
+                toggle_broadcast_aux = 0;
+            }
+        }//*** end of protocol DISABLE***///
         else {
+            //////////////////////////////////////////////////
+            /////////////   MICROGEN  SERIAL PROTOCOL    /////
             
-            receivedMessage[nbytes] = U2RXREG;
-            if(receivedMessage[nbytes]=='#'){
-                //START STATE MACHINE TO PROCESS INCOMING BUFFER
-
-              if(STATE_cardinal==START_MSG)         //START MESSAGE
-              {
-                STATE_cardinal = MSG_DATA;
-                receivedMessage[nbytes]='\0';
-              }
-              else if(STATE_cardinal==MSG_DATA)       //MESSAGE DATA
-              {
-                STATE_cardinal = CRC_DATA;
-                receivedMessage[nbytes]='\0';
-                cnt=10;
-
-              }
-              else if(STATE_cardinal==CRC_DATA)       //CRC DATA
-              {
-
-                if(nbytes == toSendCRC)
+            
+            receivedByte =  U2RXREG;
+            //receivedMessage[nbytes] = U2RXREG;
+           /* if (timeoutProtocol > TIMEOUT_PROTOCOL) {
+                timeoutProtocol = 0;
+                clearMessage();
+                nbytes = 0;
+                Microgen_state = START_MSG;
+                LATBbits.LATB4 = 1;
+                for (i = 0; i < 500; i++)
+                    asm volatile("nop");
+                LATBbits.LATB4 = 0;
+            }*/
+            
+            switch (Microgen_state) {
+                case START_MSG:
                 {
-                  receivedMessage[nbytes]='\0';
-                        //setMessage(mensagem);
-                
-                manageMessage();
-                
-                return;
-                  // manage_message();
+                    if (receivedByte == '{') {
+                        LATBbits.LATB6 = 1; //Debug only - Toggle B8 pin
+                        clearMessage();
+                        Microgen_state = MSG_DATA;
+                    }
+                    else {
+                        //do nothing;
+                        nbytes = 0;
+                        receivedMessage[nbytes] = '\0';
+                    }
+                  //  timeoutProtocol = 0;
                 }
-                else
+                    break;
+                case MSG_DATA:
                 {
-                  strcpy(receivedMessage, CRC_ERROR);
-                  nbytes=strlen(CRC_ERROR);
-                  receivedMessage[nbytes]='\0';
-
-                  //microGen_serial.setMessage(mensagem);
-             //     manageMessage();
-                return;
-                
+                    LATBbits.LATB5 = 1; 
+                    if (receivedByte == '#') {
+                        receivedMessage[nbytes] = '\0';
+                        cnt = 10;
+                        Microgen_state = CRC_DATA;
+                       // timeoutProtocol = 0;
+                    }
+                    else  if (receivedByte == '{' || receivedByte == '}') {
+                        clearMessage();
+                        Microgen_state = START_MSG;
+                    }
+                    else {
+                        receivedMessage[nbytes] = receivedByte;
+                        nbytes++; 
+                    }
+                    LATBbits.LATB5 = 0; 
                 }
-              }
+                    break;
+                case CRC_DATA:
+                {
+                    LATBbits.LATB4 = 1; 
+                    if (receivedByte == '}') {
+
+                        if (nbytes == toSendCRC) {
+                            receivedMessage[nbytes] = '\0';
+                            manageMessage();
+                            LATBbits.LATB6 = 0; //Debug only - Toggle B8 pin
+                            Microgen_state = START_MSG;
+                        } 
+                        else {
+                           // strcpy(receivedMessage, "COMMERROR");
+                            //receivedMessage[strlen("COMMERROR")+1] = '\0';
+                            //manageMessage();
+                            LATBbits.LATB6 = 0; //Debug only - Toggle B8 pin
+                            clearMessage();
+                            Microgen_state = START_MSG;
+                        }
+                        timeoutProtocol = 0;
+                    }
+                    else  if (receivedByte == '#' || receivedByte == '{') {
+                        clearMessage();
+                        Microgen_state = START_MSG;
+                    }
+                    else {
+                        toSendCRC += (receivedByte - 48) * cnt;
+                        if (cnt < 1) {
+                            clearMessage();
+                            Microgen_state = START_MSG;
+                        }
+                        cnt /= 10; 
+                    }
+                    LATBbits.LATB4 = 0; 
+                }
+                    break;
+
+                default:
+                    break;
             }
-            else if(STATE_cardinal==MSG_DATA)
-            {
-              //check if is a command with value
-              if(receivedMessage[nbytes]=='{') {
-                  //nop
-                  // enableCommand();
-              }
-               
-
-              nbytes++;
-            }
-
-            else if(STATE_cardinal==CRC_DATA)
-            {
-
-              toSendCRC+=(receivedMessage[nbytes]-48)*cnt;
-              cnt/=10;
-
-            }
-          return;
+            
+           
+             //////////////////////////////////////////////////
+            //////   END of MICROGEN  SERIAL PROTOCOL    /////
+            
         }
+        
+       /* if (timeoutProtocol > TIMEOUT_PROTOCOL) {
+            LATBbits.LATB5 = 1; //Debug only - Toggle B8 pin
+            timeoutProtocol = 0;
+            clearMessage();
+            Microgen_state = START_MSG;
+            LATBbits.LATB5 = 0; //Debug only - Toggle B8 pin
+        }
+        */ 
 
     }
 }
@@ -478,7 +544,7 @@ void configure_pins() {
 
     //Serial Port
     //8 data bits, 1 stop bit, no parity bit
-    U2BRG = 32;//97; //Baudrate = 19200 bits per second
+    U2BRG = 32; //97; //Baudrate = 19200 bits per second
     U2MODEbits.UARTEN = 1;
     U2STAbits.UTXISEL = 1;
     U2STAbits.UTXEN = 1;
@@ -644,7 +710,6 @@ float filter_1hz(float input_value, int filter_number) {
     return value_filt[filter_number];
 }
 
-
 float filter_01hz(float input_value, int filter_number) {
     //Filtro a 0.1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
@@ -678,73 +743,81 @@ void SysInit(void) {
 
 void TaskHandler(void) {
     switch (System_state) {
-    case STATE_INITIAL:
-    {
-        SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
-        set_duty_cycle(0.5);
-    }
-    break;
+        case STATE_INITIAL:
+        {
+            SysInit(); //inicializa o systema e valida se DCBUS_OK. Se DCBUS_OK e serial_com == 1 passa para STATE_ON
+            set_duty_cycle(0.5);
+        }
+            break;
 
-    case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
-    {
-        turn_on();
-        System_state = STATE_IDLE_ON;
-    }
-    break;
+        case STATE_ON: //Liga MPPT e passa para o estado IDLE_ON
+        {
+            turn_on();
+            System_state = STATE_IDLE_ON;
+        }
+            break;
 
-    case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
-    {
-        turn_off();
-        System_state = STATE_IDLE_OFF;
-    }
-    break;
+        case STATE_OFF: //Desliga MPPT e passa para o estado IDLE_OFF
+        {
+            turn_off();
+            System_state = STATE_IDLE_OFF;
+        }
+            break;
 
-    case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
-    {
-        turn_off();
-        System_state = STATE_LOCKED_IDLE;
-    }
+        case STATE_LOCKED: //Desliga MPPT, DCBUS_NOK e passa para LOCKED_IDLE
+        {
+            turn_off();
+            System_state = STATE_LOCKED_IDLE;
+        }
 
-    case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
-    {
-        DCBUS_lock();
+        case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
+        {
+            DCBUS_lock();
 
-    }
-    break;
+        }
+            break;
 
-    break;
+            break;
 
-    case STATE_IDLE_ON: //Não faz nada
-    {
-    }
-    break;
+        case STATE_IDLE_ON: //Não faz nada
+        {
+        }
+            break;
 
-    case STATE_IDLE_OFF: //Não faz nada
-    {
-    }
-    break;
+        case STATE_IDLE_OFF: //Não faz nada
+        {
+        }
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
 int main() {
     TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input
     _LATD1 = 1;
-    LATBbits.LATB8 = 1;
+    //LATBbits.LATB8 = 1;
+    
     set_duty_cycle(0);
 
-    configure_pins();
+    configure_pins(); 
+    
+    TRISBbits.TRISB8 = 0;   //pin 10 output
+    TRISBbits.TRISB7 = 0;   //pin 9 output
+    TRISBbits.TRISB6 = 0;   //pin 8 output
+    TRISBbits.TRISB5 = 0;   //pin 9 output
+    TRISBbits.TRISB4 = 0;   //pin 8 output
     init_filters();
 
     while (1) {
+ 
         if (taskHander_runflag == 1) {
             TaskHandler();
             taskHander_runflag = 0;
         }
         Serial_monitor();
-
+  
     }
 
     return 0;
@@ -754,6 +827,7 @@ int main() {
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
 
     _T1IF = 0; // Clear Timer 1 interrupt flag
+    LATBbits.LATB8 = 1; //Debug only - Toggle B8 pin
 
     /****************************************/
     /*************  ACQUISITION  ************/
@@ -761,17 +835,20 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     analog_currentPhotovoltaic = readAnalogChannel(0);
     v0 = (analog_currentPhotovoltaic * AD_FS) / AD16Bit_FS;
     currentPhotovoltaic = (v0 * HY15P_IN) / HY15P_VN;
-
+    currentPhotovoltaic = (currentPhotovoltaic * 1.0125 + 0.24); //correcção do ADC com base em ensaios em potência
     //Reads the voltage from de photovoltaic panel (VPV)
+
     analog_voltagePhotovoltaic = readAnalogChannel(1);
     v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;
-    \
-    voltagePhotovoltaic = v1 * AT_PV;
 
+    voltagePhotovoltaic = v1 * AT_PV;
+    voltagePhotovoltaic = (voltagePhotovoltaic * 0.8912 + 0.63); //correcção do ADC com base em ensaio de fonte de tensão
     // Reads the output voltage (VDC)
     analog_voltageOutput = readAnalogChannel(2);
     v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
-    voltageOutput = (v2 * AT_VDC * 0.981 + 5.89);
+    voltageOutput = v2 * AT_VDC;
+    voltageOutput = (voltageOutput * 0.981 + 5.89); //correcção do ADC com base em ensaio de fonte de tensão
+
 
     PowerPV = currentPhotovoltaic * voltagePhotovoltaic;
 
@@ -788,7 +865,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     voltagePV_filtered_250Hz = filter_250hz(voltagePhotovoltaic, 3);
     currentPV_filtered_250Hz = filter_250hz(currentPhotovoltaic, 4);
     voltageDCBUS_filtered_250Hz = filter_250hz(voltageOutput, 5);
-    powerPV_filtered_01Hz = filter_1hz(PowerPV,6);
+    powerPV_filtered_01Hz = filter_1hz(PowerPV, 6);
 
     if ((voltageDCBUS_filtered_250Hz > VDC_MIN && voltageDCBUS_filtered_250Hz < VDC_MAX)) {
         DCBUS_flag = DCBUS_OK;
@@ -822,6 +899,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
 
     updateCommCounter();
     taskHander_runflag = 1;
+    timeoutProtocol += 1;
 
-    //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
+    LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
 }

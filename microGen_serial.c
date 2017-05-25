@@ -15,97 +15,103 @@ int STATE_cardinal = 0;
 int toSendCRC = 0, nbytes = 0, cnt = 0;
 pv2rpi pv2rpi_;
 
+int commStatus = PROTOCOL_ENA;
+
 void serialwrite(char *message, int count) {
 
-	int n = 0, i=0;
-   //sizeof (message);
-	 for (n = 0; n < (count - 1); n++) {
+    int n = 0, i = 0;
+    //sizeof (message);
+    for (n = 0; n < (count - 1); n++) {
         while (U2STAbits.UTXBF) {
             // do nothing
         }
-        
-        for(i=0; i<50; i++)
-        asm volatile("nop");
-        
+
+        for (i = 0; i < 50; i++)
+            asm volatile("nop");
+
         U2TXREG = message[n];
     }
-    
+
 }
+
 void serialwritechar(char byte) {
 
-	
-        while (U2STAbits.UTXBF) {
-            // do nothing
-        }
-        U2TXREG = byte;
-    
+
+    while (U2STAbits.UTXBF) {
+        // do nothing
+    }
+    U2TXREG = byte;
+
 }
 
 void manageMessage(void) {
     int i = 0;
-  char msg[4];
-  msg[0] = '\0';
-  char com[5];
-  //com[0] = '\0';
+    char msg[4];
+    msg[0] = '\0';
+    char com[5];
+    //com[0] = '\0';
 
-  if (strcmp(receivedMessage, "SYNC")==0){
-           
-      
-      clearMessage();
-    //  grid2rpi_.APOWER=100;
- //     this->sync_ = SYNC_ENA;
-      //break;
-      //digitalWrite(pinLED, state);
-  }
+    if (strcmp(receivedMessage, "SYNC") == 0) {
 
-  
-  else if(strcmp(receivedMessage, "DCBUS")==0) {
-     
-     for(i=0; i<500; i++)
-      asm volatile("nop");
-     
-     float2str( pv2rpi_.DCBUS);
-     clearMessage();
-  }
 
-  else if(strcmp(receivedMessage, "VPV")==0) {
-       for(i=0; i<500; i++)
-      asm volatile("nop");
-     float2str( pv2rpi_.VPV);
-     clearMessage();
-  }
+        clearMessage();
+        //  grid2rpi_.APOWER=100;
+        //     this->sync_ = SYNC_ENA;
+        //break;
+        //digitalWrite(pinLED, state);
+    }
 
-  else if(strcmp(receivedMessage, "IPV")==0) {
-       for(i=0; i<500; i++)
-      asm volatile("nop");
-     float2str( pv2rpi_.IPV);
-     clearMessage();
-  }
+    else if (strcmp(receivedMessage, "DCBUS") == 0) {
 
-  else if(strcmp(receivedMessage, "PWR")==0) {
-       for(i=0; i<500; i++)
-      asm volatile("nop");
-     float2str( pv2rpi_.PWR);
-     clearMessage();
-  }
+        for (i = 0; i < 500; i++)
+            asm volatile("nop");
 
-  
-  else if(strcmp(receivedMessage, "WHOIS")==0){
+        float2str(pv2rpi_.DCBUS);
+        clearMessage();
+    }
+    else if (strcmp(receivedMessage, "VPV") == 0) {
+        for (i = 0; i < 500; i++)
+            asm volatile("nop");
+        float2str(pv2rpi_.VPV);
+        clearMessage();
+    }
+    else if (strcmp(receivedMessage, "IPV") == 0) {
+        for (i = 0; i < 500; i++)
+            asm volatile("nop");
+        float2str(pv2rpi_.IPV);
+        clearMessage();
+    }
+    else if (strcmp(receivedMessage, "PWR") == 0) {
+        for (i = 0; i < 500; i++)
+            asm volatile("nop");
+        float2str(pv2rpi_.PWR);
+        clearMessage();
+    }
 
-  	serialwrite("#SOLAR3#06#\n", sizeof("#SOLAR1#06#\n"));   ///  !!! atenção: solar 10 numchar = 07; solar7 numchar 06
-  	clearMessage();
-   
+    else if (strcmp(receivedMessage, "WHOIS") == 0) {
 
-  }
-  else {
-  	clearMessage();
-  }
+        serialwrite("#SOLAR3#06#\n", sizeof ("#SOLAR1#06#\n")); ///  !!! atenção: solar 10 numchar = 07; solar7 numchar 06
+        clearMessage();
 
- }
-  
- // else if(strcmp(receivedMessage, "BROADCAST")==0){ 
-   // broadcast_ = !broadcast_;
-//}
+
+    }
+    else if (strcmp(receivedMessage, "BROADCAST") == 0) {
+        serialwrite("#DIS#03#\n", sizeof ("#DIS#03#\n"));
+        commStatus = PROTOCOL_DIS;
+        clearMessage();
+    } 
+    else if (strcmp(receivedMessage, "COMMERROR") == 0) {
+        serialwrite("#ERR#03#\n", sizeof ("#ERR#03#\n"));
+        clearMessage();
+    } 
+    else {
+        clearMessage();
+    }
+
+}
+
+// 
+
 /*
   else if(strcmp(receivedMessage, CRC_ERROR)==0){
     delay(100);
@@ -140,252 +146,234 @@ void manageMessage(void) {
 }
  */
 
-int str2float(char msg[4])
-{
-  int resp = 0, base = 1000;
-  resp = ((int)msg[0]-48) * base;
+int str2float(char msg[4]) {
+    int resp = 0, base = 1000;
+    resp = ((int) msg[0] - 48) * base;
 
-  base=100;
-  resp = resp +(((int)msg[1]-48) * base);
+    base = 100;
+    resp = resp + (((int) msg[1] - 48) * base);
 
-  base=10;
-  resp = resp +(((int)msg[2]-48) * base);
+    base = 10;
+    resp = resp + (((int) msg[2] - 48) * base);
 
-  base=1;
-  resp = resp +(((int)msg[3]-48) * base);
+    base = 1;
+    resp = resp + (((int) msg[3] - 48) * base);
 
-  return resp;
+    return resp;
 }
 
-void float2str(int num)
-{
-   
- 
-  int base,nchar,i;
-  char message[10], crc[2];
-
-  
-   for(i=0; i<500; i++)
-      asm volatile("nop");
-   
+void float2str(int num) {
 
 
-  if(num<0)
-    num*=-1;
-
-  if(num>100000){
-  	serialwrite("#ERROR#05#\n", sizeof("#ERROR#05#\n"));
-    //Serial.println("error");
-  }
-  else
-  {
-    for(i=num, base=1; i>=10;base*=10)         //identifica o peso maximo do numero
-      i/=10;
+    int base, nchar, i;
+    char message[10], crc[2];
 
 
-    for(nchar=0;     base>=1 ;      base/=10,nchar++)
-    {
-      message[nchar]=(char)(num/base+48);
-      num= num%base;
-    }
-    message[nchar]='\0';
+    for (i = 0; i < 500; i++)
+        asm volatile("nop");
 
 
 
+    if (num < 0)
+        num *= -1;
 
-    crc[0] = '0';
-    crc[1] = (char)(nchar+48);
-
-    serialwritechar('#');
-  	serialwrite(message, nchar+1);
-  	serialwritechar('#');
-  	serialwrite(crc, 3);
-  	serialwritechar('#');
-    //serialwritechar('\0');
-
-  	/*  Serial.write('#');
-    Serial.print(message);
-    Serial.write('#');
-    Serial.print(crc);
-    Serial.write('#');
-  */
-  }
-  
-}
-
-void float2strGain100(int num)
-{
-
-  int base,nchar,i;
-  char message[10], crc[2];
-
-  
-   for( i=0; i<500; i++)
-      asm volatile("nop");
-   
+    if (num > 100000) {
+        serialwrite("#ERROR#05#\n", sizeof ("#ERROR#05#\n"));
+        //Serial.println("error");
+    } else {
+        for (i = num, base = 1; i >= 10; base *= 10) //identifica o peso maximo do numero
+            i /= 10;
 
 
-  if(num<0)
-    num*=-1;
-
-  if(num>100000){
-   	serialwrite("#ERROR#05#\n", sizeof("#ERROR#05#\n"));
-  }  
-  else
-  {
-    for(i=num, base=1; i>=10;base*=10)         //identifica o peso maximo do numero
-      i/=10;
-
-    if(num>100) {
-    
-      for(nchar=0;     base>=1 ;      base/=10,nchar++)
-      {
-        if (base==100){
-          message[nchar]=(char)(num/base+48);
-          nchar++;
-          message[nchar] = '.';
-          num= num%base;
+        for (nchar = 0; base >= 1; base /= 10, nchar++) {
+            message[nchar] = (char) (num / base + 48);
+            num = num % base;
         }
-        else{
-        message[nchar]=(char)(num/base+48);
-        num= num%base;
-        }
-      }
-      }
-    else  {
+        message[nchar] = '\0';
 
-      message[0] = '0';
-      message[1] = '.';
-      message[2]=(char)(num/10+48);
-      message[3]=(char)(num%10+48);
-      nchar=4;
+
+
+
+        crc[0] = '0';
+        crc[1] = (char) (nchar + 48);
+
+        serialwritechar('#');
+        serialwrite(message, nchar + 1);
+        serialwritechar('#');
+        serialwrite(crc, 3);
+        serialwritechar('#');
+        //serialwritechar('\0');
+
+        /*  Serial.write('#');
+        Serial.print(message);
+        Serial.write('#');
+        Serial.print(crc);
+        Serial.write('#');
+         */
     }
 
-      message[nchar]='\0';
-
-
-    crc[0] = '0';
-    crc[1] = (char)(nchar+48);
-
-    serialwritechar('#');
-  	serialwrite(message, nchar+1);
-  	serialwritechar('#');
-  	serialwrite(crc, 3);
-  	serialwrite("#\n", 2);
-  }
-  
 }
-void float2strGain10(int num)
-{
 
-  int base,nchar,i;
-  char message[10], crc[2];
+void float2strGain100(int num) {
 
-  
-   for(i=0; i<500; i++)
-      asm volatile("nop");
-   
+    int base, nchar, i;
+    char message[10], crc[2];
 
 
-  if(num<0)
-    num*=-1;
+    for (i = 0; i < 500; i++)
+        asm volatile("nop");
 
-  if(num>100000) {
-    	serialwrite("#ERROR#05#\n", sizeof("#ERROR#05#\n"));
-  }
-  else
-  {
-    for(i=num, base=1; i>=10;base*=10)         //identifica o peso maximo do numero
-      i/=10;
 
-      
-    if(num>10) {
 
-      for(nchar=0;     base>=1 ;      base/=10,nchar++)
-      {
-        if (base==10){
-          message[nchar]=(char)(num/base+48);
-          nchar++;
-          message[nchar] = '.';
-          num= num%base;
-        }
-        else{
-        message[nchar]=(char)(num/base+48);
-        num= num%base;
-        }
-      }
+    if (num < 0)
+        num *= -1;
+
+    if (num > 100000) {
+        serialwrite("#ERROR#05#\n", sizeof ("#ERROR#05#\n"));
     }
-    else  {
+    else {
+        for (i = num, base = 1; i >= 10; base *= 10) //identifica o peso maximo do numero
+            i /= 10;
 
-      message[0] = '0';
-      message[1] = '.';
-      message[2]=(char)(num+48);
-      nchar=3;
+        if (num > 100) {
+
+            for (nchar = 0; base >= 1; base /= 10, nchar++) {
+                if (base == 100) {
+                    message[nchar] = (char) (num / base + 48);
+                    nchar++;
+                    message[nchar] = '.';
+                    num = num % base;
+                } else {
+                    message[nchar] = (char) (num / base + 48);
+                    num = num % base;
+                }
+            }
+        } else {
+
+            message[0] = '0';
+            message[1] = '.';
+            message[2] = (char) (num / 10 + 48);
+            message[3] = (char) (num % 10 + 48);
+            nchar = 4;
+        }
+
+        message[nchar] = '\0';
+
+
+        crc[0] = '0';
+        crc[1] = (char) (nchar + 48);
+
+        serialwritechar('#');
+        serialwrite(message, nchar + 1);
+        serialwritechar('#');
+        serialwrite(crc, 3);
+        serialwrite("#\n", 2);
     }
 
-   
-
-    message[nchar]='\0';
-
-
-    crc[0] = '0';
-    crc[1] = (char)(nchar+48);
-
-    serialwritechar('#');
-  	serialwrite(message, nchar+1);
-  	serialwritechar('#');
-  	serialwrite(crc, 3);
-  	serialwrite("#\n", 2);
-
-
-  }
-  
 }
 
-void clearMessage()
-{
+void float2strGain10(int num) {
 
-  toSendCRC=0;
-  nbytes=0;
-  receivedMessage[0]='\0';
-  STATE_cardinal=0;   //TODO:verify
+    int base, nchar, i;
+    char message[10], crc[2];
+
+
+    for (i = 0; i < 500; i++)
+        asm volatile("nop");
+
+
+
+    if (num < 0)
+        num *= -1;
+
+    if (num > 100000) {
+        serialwrite("#ERROR#05#\n", sizeof ("#ERROR#05#\n"));
+    } else {
+        for (i = num, base = 1; i >= 10; base *= 10) //identifica o peso maximo do numero
+            i /= 10;
+
+
+        if (num > 10) {
+
+            for (nchar = 0; base >= 1; base /= 10, nchar++) {
+                if (base == 10) {
+                    message[nchar] = (char) (num / base + 48);
+                    nchar++;
+                    message[nchar] = '.';
+                    num = num % base;
+                } else {
+                    message[nchar] = (char) (num / base + 48);
+                    num = num % base;
+                }
+            }
+        } else {
+
+            message[0] = '0';
+            message[1] = '.';
+            message[2] = (char) (num + 48);
+            nchar = 3;
+        }
+
+
+
+        message[nchar] = '\0';
+
+
+        crc[0] = '0';
+        crc[1] = (char) (nchar + 48);
+
+        serialwritechar('#');
+        serialwrite(message, nchar + 1);
+        serialwritechar('#');
+        serialwrite(crc, 3);
+        serialwrite("#\n", 2);
+
+
+    }
 
 }
-void sendACK()
-{
-   
-/*  Serial.print("ACK");
-  Serial.write('#');
-  Serial.print("03");
-  Serial.write('#');
-  */
-  
+
+void clearMessage() {
+
+    toSendCRC = 0;
+    nbytes = 0;
+    receivedMessage[0] = '\0';
 }
-void sendTimeout()
-{
-/*   
-  Serial.write('#');
-  Serial.print("TIMEOUT");
-  Serial.write('#');
-  Serial.print("07");
-  Serial.write('#');
-  */
-   
+
+void sendACK() {
+
+    /*  Serial.print("ACK");
+      Serial.write('#');
+      Serial.print("03");
+      Serial.write('#');
+     */
+
 }
-void sendInvalidComamnd()
-{
-	/*
+
+void sendTimeout() {
+    /*   
+      Serial.write('#');
+      Serial.print("TIMEOUT");
+      Serial.write('#');
+      Serial.print("07");
+      Serial.write('#');
+     */
+
+}
+
+void sendInvalidComamnd() {
+    /*
   Serial.write('#');
   Serial.print("INVALID");
   Serial.write('#');
   Serial.print("07");
   Serial.write('#');
-  */
+     */
 }
 
 /*
 void setMessage(char msg[100]){ 
-	strcpy(receivedMessage,msg); 
+    strcpy(receivedMessage,msg); 
 }
 
 void enableCommand(void){
@@ -395,4 +383,6 @@ void microGen_serial::disableCommand(void){
   status_command = COMMAND_DIS;
 }
 
-*/
+ */
+
+

@@ -29,12 +29,18 @@ extern "C" {
 
 #include "microgen.h"
 
+#define PROTOCOL_ENA 1
+#define PROTOCOL_DIS 0
+#define SERIAL_PROTOCOL PROTOCOL_ENA
+
 
 extern char receivedMessage[100];
 //boolean status_command;
 extern int STATE_cardinal;
 extern int toSendCRC, nbytes, cnt;
 extern pv2rpi pv2rpi_;
+
+extern int commStatus;
 
 
 void serialwrite(char *message, int count);
@@ -54,6 +60,8 @@ void sendACK();
 void sendTimeout();
 
 void sendInvalidComamnd();
+
+
 /*
 /*
 void setMessage(char msg[100]){ 

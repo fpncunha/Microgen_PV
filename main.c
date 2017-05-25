@@ -224,7 +224,7 @@ void toggleCommBroadcast(void) {
 void toggleCommBroadcast_parsing(void) {
     taskCommBroadcast_parsing_runflag = (taskCommBroadcast_parsing_runflag == 1) ? 0 : 1;
 }
-/***** broadcast de comunicação a 1seg *****/
+/***** broadcast de comunicaï¿½ï¿½o a 1seg *****/
 
 /*******************************************/
 void TaskCommBroadcast(void) {
@@ -664,7 +664,7 @@ void print_header(char* msg, int count) {
 }
 
 float filter_250hz(float input_value, int filter_number) {
-    //Filtro a 250Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Filtro a 250Hz primeira ordem: coeficientes obtidos em \..\3. Simulaï¿½ï¿½o\3. controlo eï¿½lica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
@@ -679,7 +679,7 @@ float filter_250hz(float input_value, int filter_number) {
 }
 
 float filter_10hz(float input_value, int filter_number) {
-    //Filtro a 10Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Filtro a 10Hz primeira ordem: coeficientes obtidos em \..\3. Simulaï¿½ï¿½o\3. controlo eï¿½lica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
@@ -695,7 +695,7 @@ float filter_10hz(float input_value, int filter_number) {
 }
 
 float filter_1hz(float input_value, int filter_number) {
-    //Filtro a 1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Filtro a 1Hz primeira ordem: coeficientes obtidos em \..\3. Simulaï¿½ï¿½o\3. controlo eï¿½lica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
@@ -711,7 +711,7 @@ float filter_1hz(float input_value, int filter_number) {
 }
 
 float filter_01hz(float input_value, int filter_number) {
-    //Filtro a 0.1Hz primeira ordem: coeficientes obtidos em \..\3. Simulação\3. controlo eólica\filtro.m
+    //Filtro a 0.1Hz primeira ordem: coeficientes obtidos em \..\3. Simulaï¿½ï¿½o\3. controlo eï¿½lica\filtro.m
     //Values(i) = (b(1)*signal(i)+b(2)*signal(i-1)-a(2)*values(i-1))/a(1);
 
     //A1 = 1
@@ -770,7 +770,7 @@ void TaskHandler(void) {
             System_state = STATE_LOCKED_IDLE;
         }
 
-        case STATE_LOCKED_IDLE: //Verifica continuamente VDC até que DCBUS_OK
+        case STATE_LOCKED_IDLE: //Verifica continuamente VDC atï¿½ que DCBUS_OK
         {
             DCBUS_lock();
 
@@ -779,12 +779,12 @@ void TaskHandler(void) {
 
             break;
 
-        case STATE_IDLE_ON: //Não faz nada
+        case STATE_IDLE_ON: //Nï¿½o faz nada
         {
         }
             break;
 
-        case STATE_IDLE_OFF: //Não faz nada
+        case STATE_IDLE_OFF: //Nï¿½o faz nada
         {
         }
             break;
@@ -835,19 +835,19 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     analog_currentPhotovoltaic = readAnalogChannel(0);
     v0 = (analog_currentPhotovoltaic * AD_FS) / AD16Bit_FS;
     currentPhotovoltaic = (v0 * HY15P_IN) / HY15P_VN;
-    currentPhotovoltaic = (currentPhotovoltaic * 1.0125 + 0.24); //correcção do ADC com base em ensaios em potência
+    currentPhotovoltaic = (currentPhotovoltaic * 1.0125 + 0.24); //correcï¿½ï¿½o do ADC com base em ensaios em potï¿½ncia
     //Reads the voltage from de photovoltaic panel (VPV)
 
     analog_voltagePhotovoltaic = readAnalogChannel(1);
     v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;
 
     voltagePhotovoltaic = v1 * AT_PV;
-    voltagePhotovoltaic = (voltagePhotovoltaic * 0.8912 + 0.63); //correcção do ADC com base em ensaio de fonte de tensão
+    voltagePhotovoltaic = (voltagePhotovoltaic * 0.8912 + 0.63); //correcï¿½ï¿½o do ADC com base em ensaio de fonte de tensï¿½o
     // Reads the output voltage (VDC)
     analog_voltageOutput = readAnalogChannel(2);
     v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
     voltageOutput = v2 * AT_VDC;
-    voltageOutput = (voltageOutput * 0.981 + 5.89); //correcção do ADC com base em ensaio de fonte de tensão
+    voltageOutput = (voltageOutput * 0.981 + 5.89); //correcï¿½ï¿½o do ADC com base em ensaio de fonte de tensï¿½o
 
 
     PowerPV = currentPhotovoltaic * voltagePhotovoltaic;
@@ -884,7 +884,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
 
     /*********************************/
     /*************  MPPT  ************/
-    //TODO: ver se o else não inclui "ifs" em que o mppt é maior que 100
+    //TODO: ver se o else nï¿½o inclui "ifs" em que o mppt ï¿½ maior que 100
     if ((mppt_counter >= 100) && (System_state == STATE_IDLE_ON)) {
         //__delay32(10000); //Random delay
         run_mppt(voltagePV_filtered_10Hz, voltagePV_filtered_ant, currentPV_filtered_10Hz, currentPV_filtered_ant);

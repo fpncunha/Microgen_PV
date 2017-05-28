@@ -99,25 +99,14 @@ Program Memory  [Origin = 0x100, Length = 0x7f00]
 
 section                    address   length (PC units)   length (bytes) (dec)
 -------                    -------   -----------------   --------------------
-<<<<<<< HEAD
 .text                        0x100               0x4aa           0x6ff  (1791)
-.const                       0x5aa                0x56            0x81  (129)
-.text                        0x600              0x114c          0x19f2  (6642)
-.dinit                      0x174c                0x80            0xc0  (192)
-.init.delay32               0x17cc                0x1c            0x2a  (42)
-.text                       0x17e8                 0xc            0x12  (18)
+.const                       0x5aa                0x52            0x7b  (123)
+.text                        0x5fc              0x1166          0x1a19  (6681)
+.dinit                      0x1762                0x80            0xc0  (192)
+.init.delay32               0x17e2                0x1c            0x2a  (42)
+.text                       0x17fe                 0xc            0x12  (18)
 
-                 Total program memory used (bytes):         0x226e  (8814) 18%
-=======
-.text                        0x100               0x4b8           0x714  (1812)
-.const                       0x5b8                0x60            0x90  (144)
-.text                        0x618              0x1168          0x1a1c  (6684)
-.dinit                      0x1780                0x80            0xc0  (192)
-.init.delay32               0x1800                0x1c            0x2a  (42)
-.text                       0x181c                 0xc            0x12  (18)
-
-                 Total program memory used (bytes):         0x22bc  (8892) 18%
->>>>>>> wifi
+                 Total program memory used (bytes):         0x228f  (8847) 18%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x7c]
@@ -340,122 +329,62 @@ External Symbols in Program Memory (by address):
                   0x0004d6                  __fcompare
                   0x00050c                  ___floatdisf
                   0x00052c                  ___floatundisf
-<<<<<<< HEAD
                   0x00058a                  _strcmp
-                  0x000600                  _synchronizeCommData
-                  0x00065c                  _updateCommCounter
-                  0x0006a4                  _toggleCommBroadcast
-                  0x0006b8                  _toggleCommBroadcast_parsing
-                  0x0006cc                  _TaskCommBroadcast
-                  0x0006fc                  _TaskCommBroadcast_parsing
-                  0x00072c                  _init_filters
-                  0x000768                  _Serial_monitor
-                  0x00090a                  _turn_on
-                  0x000926                  _turn_off
-                  0x000930                  _DCBUS_lock
-                  0x00095a                  _run_mppt
-                  0x000b1e                  _set_duty_cycle
-                  0x000b48                  _configure_pins
-                  0x000bc0                  _readAnalogChannel
-                  0x000be2                  _txInt
-                  0x000ca2                  _txFloat
-                  0x000ce4                  _number
-                  0x000d18                  _txChar
-                  0x000d30                  _print_data
-                  0x000d9a                  _print_data_parsing
-                  0x000de6                  _print_header
-                  0x000e1a                  _filter_250hz
-                  0x000e7c                  _filter_10hz
-                  0x000ef6                  _filter_1hz
-                  0x000f70                  _filter_01hz
-                  0x000fea                  _SysInit
-                  0x001018                  _TaskHandler
-                  0x00106a                  _main
-                  0x001092                  __T1Interrupt
-                  0x00127a                  _serialwrite
-                  0x0012ca                  _serialwritechar
-                  0x0012fa                  _manageMessage
-                  0x0013a6                  _str2float
-                  0x001412                  _float2str
-                  0x0014d4                  _float2strGain100
-                  0x001610                  _float2strGain10
-                  0x00172e                  _clearMessage
-                  0x00173a                  _sendACK
-                  0x001740                  _sendTimeout
-                  0x001746                  _sendInvalidComamnd
-                  0x0017cc                  ___delay32
-                  0x0017e8                  _ConfigureOscillator
-                  0x0017ee                  _InitApp
+                  0x0005fc                  _synchronizeCommData
+                  0x000658                  _updateCommCounter
+                  0x0006a0                  _toggleCommBroadcast
+                  0x0006b4                  _toggleCommBroadcast_parsing
+                  0x0006c8                  _TaskCommBroadcast
+                  0x0006f8                  _TaskCommBroadcast_parsing
+                  0x000728                  _init_filters
+                  0x000764                  _Serial_monitor
+                  0x0008f2                  _turn_on
+                  0x00090e                  _turn_off
+                  0x000918                  _DCBUS_lock
+                  0x000942                  _run_mppt
+                  0x000b06                  _set_duty_cycle
+                  0x000b30                  _configure_pins
+                  0x000ba8                  _readAnalogChannel
+                  0x000bca                  _txInt
+                  0x000c8a                  _txFloat
+                  0x000ccc                  _number
+                  0x000d00                  _txChar
+                  0x000d18                  _print_data
+                  0x000d82                  _print_data_parsing
+                  0x000dce                  _print_header
+                  0x000e02                  _filter_250hz
+                  0x000e64                  _filter_10hz
+                  0x000ede                  _filter_1hz
+                  0x000f58                  _filter_01hz
+                  0x000fd2                  _SysInit
+                  0x001000                  _TaskHandler
+                  0x001052                  _main
+                  0x00107a                  __T1Interrupt
+                  0x001262                  _serialwrite
+                  0x0012b2                  _serialwritechar
+                  0x0012e2                  _manageMessage
+                  0x00138a                  _str2float
+                  0x0013f6                  _float2str
+                  0x0014ea                  _float2strGain100
+                  0x001626                  _float2strGain10
+                  0x001744                  _clearMessage
+                  0x001750                  _sendACK
+                  0x001756                  _sendTimeout
+                  0x00175c                  _sendInvalidComamnd
+                  0x0017e2                  ___delay32
+                  0x0017fe                  _ConfigureOscillator
+                  0x001804                  _InitApp
 
 External Symbols in Program Memory (by name):
 
-                  0x0017e8                  _ConfigureOscillator
-                  0x000930                  _DCBUS_lock
-                  0x0017ee                  _InitApp
-                  0x000768                  _Serial_monitor
-                  0x000fea                  _SysInit
-                  0x0006cc                  _TaskCommBroadcast
-                  0x0006fc                  _TaskCommBroadcast_parsing
-                  0x001018                  _TaskHandler
-=======
-                  0x00058a                  _memcpy
-                  0x000598                  _strcmp
-                  0x000618                  _synchronizeCommData
-                  0x000674                  _updateCommCounter
-                  0x0006bc                  _toggleCommBroadcast
-                  0x0006d0                  _toggleCommBroadcast_parsing
-                  0x0006e4                  _TaskCommBroadcast
-                  0x000714                  _TaskCommBroadcast_parsing
-                  0x000744                  _init_filters
-                  0x000780                  _Serial_monitor
-                  0x00090e                  _turn_on
-                  0x00092a                  _turn_off
-                  0x000934                  _DCBUS_lock
-                  0x00095e                  _run_mppt
-                  0x000b22                  _set_duty_cycle
-                  0x000b4c                  _configure_pins
-                  0x000bc4                  _readAnalogChannel
-                  0x000be6                  _txInt
-                  0x000ca6                  _txFloat
-                  0x000ce8                  _number
-                  0x000d1c                  _txChar
-                  0x000d34                  _print_data
-                  0x000d9e                  _print_data_parsing
-                  0x000dea                  _print_header
-                  0x000e1e                  _filter_250hz
-                  0x000e80                  _filter_10hz
-                  0x000efa                  _filter_1hz
-                  0x000f74                  _filter_01hz
-                  0x000fee                  _SysInit
-                  0x00101c                  _TaskHandler
-                  0x00106e                  _main
-                  0x001096                  __T1Interrupt
-                  0x00127e                  _serialwrite
-                  0x0012ce                  _serialwritechar
-                  0x0012e6                  _manageMessage
-                  0x0013da                  _str2float
-                  0x001446                  _float2str
-                  0x001508                  _float2strGain100
-                  0x001644                  _float2strGain10
-                  0x001762                  _clearMessage
-                  0x00176e                  _sendACK
-                  0x001774                  _sendTimeout
-                  0x00177a                  _sendInvalidComamnd
-                  0x001800                  ___delay32
-                  0x00181c                  _ConfigureOscillator
-                  0x001822                  _InitApp
-
-External Symbols in Program Memory (by name):
-
-                  0x00181c                  _ConfigureOscillator
-                  0x000934                  _DCBUS_lock
-                  0x001822                  _InitApp
-                  0x000780                  _Serial_monitor
-                  0x000fee                  _SysInit
-                  0x0006e4                  _TaskCommBroadcast
-                  0x000714                  _TaskCommBroadcast_parsing
-                  0x00101c                  _TaskHandler
->>>>>>> wifi
+                  0x0017fe                  _ConfigureOscillator
+                  0x000918                  _DCBUS_lock
+                  0x001804                  _InitApp
+                  0x000764                  _Serial_monitor
+                  0x000fd2                  _SysInit
+                  0x0006c8                  _TaskCommBroadcast
+                  0x0006f8                  _TaskCommBroadcast_parsing
+                  0x001000                  _TaskHandler
                   0x0001ce                  __AddressError
                   0x0001e6                  __AltAddressError
                   0x0001f2                  __AltMathError
@@ -465,15 +394,9 @@ External Symbols in Program Memory (by name):
                   0x0001da                  __MathError
                   0x0001c8                  __OscillatorFail
                   0x0001d4                  __StackError
-<<<<<<< HEAD
-                  0x001092                  __T1Interrupt
+                  0x00107a                  __T1Interrupt
                   0x000200                  ___addsf3
-                  0x0017cc                  ___delay32
-=======
-                  0x001096                  __T1Interrupt
-                  0x000200                  ___addsf3
-                  0x001800                  ___delay32
->>>>>>> wifi
+                  0x0017e2                  ___delay32
                   0x0002ba                  ___divsf3
                   0x00033e                  ___eqsf2
                   0x000346                  ___fixsfsi
@@ -499,80 +422,41 @@ External Symbols in Program Memory (by name):
                   0x00043e                  __funpack2
                   0x00013c                  __psv_init
                   0x000100                  __resetPRI
-<<<<<<< HEAD
-                  0x00172e                  _clearMessage
-                  0x000b48                  _configure_pins
-                  0x000f70                  _filter_01hz
-                  0x000e7c                  _filter_10hz
-                  0x000ef6                  _filter_1hz
-                  0x000e1a                  _filter_250hz
-                  0x001412                  _float2str
-                  0x001610                  _float2strGain10
-                  0x0014d4                  _float2strGain100
-                  0x00072c                  _init_filters
-                  0x00106a                  _main
-                  0x0012fa                  _manageMessage
-                  0x000ce4                  _number
-                  0x000d30                  _print_data
-                  0x000d9a                  _print_data_parsing
-                  0x000de6                  _print_header
-                  0x000bc0                  _readAnalogChannel
-                  0x00095a                  _run_mppt
-                  0x00173a                  _sendACK
-                  0x001746                  _sendInvalidComamnd
-                  0x001740                  _sendTimeout
-                  0x00127a                  _serialwrite
-                  0x0012ca                  _serialwritechar
-                  0x000b1e                  _set_duty_cycle
-                  0x0013a6                  _str2float
+                  0x001744                  _clearMessage
+                  0x000b30                  _configure_pins
+                  0x000f58                  _filter_01hz
+                  0x000e64                  _filter_10hz
+                  0x000ede                  _filter_1hz
+                  0x000e02                  _filter_250hz
+                  0x0013f6                  _float2str
+                  0x001626                  _float2strGain10
+                  0x0014ea                  _float2strGain100
+                  0x000728                  _init_filters
+                  0x001052                  _main
+                  0x0012e2                  _manageMessage
+                  0x000ccc                  _number
+                  0x000d18                  _print_data
+                  0x000d82                  _print_data_parsing
+                  0x000dce                  _print_header
+                  0x000ba8                  _readAnalogChannel
+                  0x000942                  _run_mppt
+                  0x001750                  _sendACK
+                  0x00175c                  _sendInvalidComamnd
+                  0x001756                  _sendTimeout
+                  0x001262                  _serialwrite
+                  0x0012b2                  _serialwritechar
+                  0x000b06                  _set_duty_cycle
+                  0x00138a                  _str2float
                   0x00058a                  _strcmp
-                  0x000600                  _synchronizeCommData
-                  0x0006a4                  _toggleCommBroadcast
-                  0x0006b8                  _toggleCommBroadcast_parsing
-                  0x000926                  _turn_off
-                  0x00090a                  _turn_on
-                  0x000d18                  _txChar
-                  0x000ca2                  _txFloat
-                  0x000be2                  _txInt
-                  0x00065c                  _updateCommCounter
-=======
-                  0x001762                  _clearMessage
-                  0x000b4c                  _configure_pins
-                  0x000f74                  _filter_01hz
-                  0x000e80                  _filter_10hz
-                  0x000efa                  _filter_1hz
-                  0x000e1e                  _filter_250hz
-                  0x001446                  _float2str
-                  0x001644                  _float2strGain10
-                  0x001508                  _float2strGain100
-                  0x000744                  _init_filters
-                  0x00106e                  _main
-                  0x0012e6                  _manageMessage
-                  0x00058a                  _memcpy
-                  0x000ce8                  _number
-                  0x000d34                  _print_data
-                  0x000d9e                  _print_data_parsing
-                  0x000dea                  _print_header
-                  0x000bc4                  _readAnalogChannel
-                  0x00095e                  _run_mppt
-                  0x00176e                  _sendACK
-                  0x00177a                  _sendInvalidComamnd
-                  0x001774                  _sendTimeout
-                  0x00127e                  _serialwrite
-                  0x0012ce                  _serialwritechar
-                  0x000b22                  _set_duty_cycle
-                  0x0013da                  _str2float
-                  0x000598                  _strcmp
-                  0x000618                  _synchronizeCommData
-                  0x0006bc                  _toggleCommBroadcast
-                  0x0006d0                  _toggleCommBroadcast_parsing
-                  0x00092a                  _turn_off
-                  0x00090e                  _turn_on
-                  0x000d1c                  _txChar
-                  0x000ca6                  _txFloat
-                  0x000be6                  _txInt
-                  0x000674                  _updateCommCounter
->>>>>>> wifi
+                  0x0005fc                  _synchronizeCommData
+                  0x0006a0                  _toggleCommBroadcast
+                  0x0006b4                  _toggleCommBroadcast_parsing
+                  0x00090e                  _turn_off
+                  0x0008f2                  _turn_on
+                  0x000d00                  _txChar
+                  0x000c8a                  _txFloat
+                  0x000bca                  _txInt
+                  0x000658                  _updateCommCounter
 
 Memory Configuration
 
@@ -766,11 +650,7 @@ userdata
 .comment
  *(.comment)
 
-<<<<<<< HEAD
-.debug_info       0x000000       0x3229
-=======
-.debug_info       0x000000       0x3224
->>>>>>> wifi
+.debug_info       0x000000       0x31fd
  *(.debug_info)
  .debug_info      0x000000         0xbc build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_info      0x0000bc        0x116 build/XC16_dsPIC30F4011/production/interrupts.o
@@ -778,14 +658,10 @@ userdata
  .debug_info      0x00253a        0x135 build/XC16_dsPIC30F4011/production/system.o
  .debug_info      0x00266f        0x316 build/XC16_dsPIC30F4011/production/traps.o
  .debug_info      0x002985        0x127 build/XC16_dsPIC30F4011/production/user.o
-<<<<<<< HEAD
- .debug_info      0x002aac        0x77d build/XC16_dsPIC30F4011/production/microGen_serial.o
-=======
- .debug_info      0x002aac        0x778 build/XC16_dsPIC30F4011/production/microGen_serial.o
->>>>>>> wifi
+ .debug_info      0x002aac        0x751 build/XC16_dsPIC30F4011/production/microGen_serial.o
  *(.gnu.linkonce.wi.*)
 
-.debug_abbrev     0x000000        0x503
+.debug_abbrev     0x000000        0x516
  *(.debug_abbrev)
  .debug_abbrev    0x000000         0x1f build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_abbrev    0x00001f         0x1f build/XC16_dsPIC30F4011/production/interrupts.o
@@ -793,25 +669,17 @@ userdata
  .debug_abbrev    0x000274         0x34 build/XC16_dsPIC30F4011/production/system.o
  .debug_abbrev    0x0002a8         0x7d build/XC16_dsPIC30F4011/production/traps.o
  .debug_abbrev    0x000325         0x34 build/XC16_dsPIC30F4011/production/user.o
- .debug_abbrev    0x000359        0x1aa build/XC16_dsPIC30F4011/production/microGen_serial.o
+ .debug_abbrev    0x000359        0x1bd build/XC16_dsPIC30F4011/production/microGen_serial.o
 
-<<<<<<< HEAD
-.debug_line       0x000000        0x548
-=======
-.debug_line       0x000000        0x552
->>>>>>> wifi
+.debug_line       0x000000        0x545
  *(.debug_line)
  .debug_line      0x000000         0x1a build/XC16_dsPIC30F4011/production/configuration_bits.o
  .debug_line      0x00001a         0x1a build/XC16_dsPIC30F4011/production/interrupts.o
- .debug_line      0x000034        0x288 build/XC16_dsPIC30F4011/production/main.o
- .debug_line      0x0002bc         0x38 build/XC16_dsPIC30F4011/production/system.o
- .debug_line      0x0002f4         0xaa build/XC16_dsPIC30F4011/production/traps.o
- .debug_line      0x00039e         0x34 build/XC16_dsPIC30F4011/production/user.o
-<<<<<<< HEAD
- .debug_line      0x0003d2        0x176 build/XC16_dsPIC30F4011/production/microGen_serial.o
-=======
- .debug_line      0x0003d2        0x180 build/XC16_dsPIC30F4011/production/microGen_serial.o
->>>>>>> wifi
+ .debug_line      0x000034        0x287 build/XC16_dsPIC30F4011/production/main.o
+ .debug_line      0x0002bb         0x38 build/XC16_dsPIC30F4011/production/system.o
+ .debug_line      0x0002f3         0xaa build/XC16_dsPIC30F4011/production/traps.o
+ .debug_line      0x00039d         0x34 build/XC16_dsPIC30F4011/production/user.o
+ .debug_line      0x0003d1        0x174 build/XC16_dsPIC30F4011/production/microGen_serial.o
 
 .debug_frame      0x000000        0x680
  *(.debug_frame)
@@ -1590,7 +1458,6 @@ LOAD data_init
                   0x0002af         0x3c build/XC16_dsPIC30F4011/production/microGen_serial.o
 
 __c30_signature
-<<<<<<< HEAD
                   0x0002eb         0xa2
  __c30_signature
                   0x0002eb          0x6 build/XC16_dsPIC30F4011/production/configuration_bits.o
@@ -1646,65 +1513,6 @@ __c30_signature
                   0x000381          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(floatundisf.eo)
  __c30_signature
                   0x000387          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-c-elf.a(strcmp.XX_eo)
-=======
-                  0x0002eb         0xa8
- __c30_signature
-                  0x0002eb          0x6 build/XC16_dsPIC30F4011/production/configuration_bits.o
- __c30_signature
-                  0x0002f1          0x6 build/XC16_dsPIC30F4011/production/interrupts.o
- __c30_signature
-                  0x0002f7          0x6 build/XC16_dsPIC30F4011/production/main.o
- __c30_signature
-                  0x0002fd          0x6 build/XC16_dsPIC30F4011/production/system.o
- __c30_signature
-                  0x000303          0x6 build/XC16_dsPIC30F4011/production/traps.o
- __c30_signature
-                  0x000309          0x6 build/XC16_dsPIC30F4011/production/user.o
- __c30_signature
-                  0x00030f          0x6 build/XC16_dsPIC30F4011/production/microGen_serial.o
- __c30_signature
-                  0x000315          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(crt0_standard.o)
- __c30_signature
-                  0x00031b          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(data_init_standard.o)
- __c30_signature
-                  0x000321          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
- __c30_signature
-                  0x000327          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(addsf3.eo)
- __c30_signature
-                  0x00032d          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(divsf3.eo)
- __c30_signature
-                  0x000333          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(feqltle.eo)
- __c30_signature
-                  0x000339          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(fgtge.eo)
- __c30_signature
-                  0x00033f          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(fixsfsi.eo)
- __c30_signature
-                  0x000345          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(fixunssfsi.eo)
- __c30_signature
-                  0x00034b          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(floatsisf.eo)
- __c30_signature
-                  0x000351          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(floatunsisf.eo)
- __c30_signature
-                  0x000357          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(fpack.eo)
- __c30_signature
-                  0x00035d          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(funpack.eo)
- __c30_signature
-                  0x000363          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(funpack2.eo)
- __c30_signature
-                  0x000369          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(futil.eo)
- __c30_signature
-                  0x00036f          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(mulsf3.eo)
- __c30_signature
-                  0x000375          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(fcompare.eo)
- __c30_signature
-                  0x00037b          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(floatdisf.eo)
- __c30_signature
-                  0x000381          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\libm-elf.a(floatundisf.eo)
- __c30_signature
-                  0x000387          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-c-elf.a(memcpy.XX_eo)
- __c30_signature
-                  0x00038d          0x6 c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-c-elf.a(strcmp.XX_eo)
->>>>>>> wifi
 
 .nbss               0x0800         0xe6
  .nbss              0x0800         0xe6 build/XC16_dsPIC30F4011/production/main.o
@@ -1830,127 +1638,63 @@ __c30_signature
  .aivt._AltMathError
                   0x00008c          0x2 build/XC16_dsPIC30F4011/production/traps.o
 
-<<<<<<< HEAD
-.const              0x85aa         0x56 load address 0x0005aa  
- .const             0x85aa         0x56 build/XC16_dsPIC30F4011/production/microGen_serial.o
+.const              0x85aa         0x52 load address 0x0005aa  
+ .const             0x85aa         0x52 build/XC16_dsPIC30F4011/production/microGen_serial.o
 
-.text             0x000600       0x114c
- .text            0x000600        0xc7a build/XC16_dsPIC30F4011/production/main.o
-                  0x000600                  _synchronizeCommData
-                  0x00065c                  _updateCommCounter
-                  0x0006a4                  _toggleCommBroadcast
-                  0x0006b8                  _toggleCommBroadcast_parsing
-                  0x0006cc                  _TaskCommBroadcast
-                  0x0006fc                  _TaskCommBroadcast_parsing
-                  0x00072c                  _init_filters
-                  0x000768                  _Serial_monitor
-                  0x00090a                  _turn_on
-                  0x000926                  _turn_off
-                  0x000930                  _DCBUS_lock
-                  0x00095a                  _run_mppt
-                  0x000b1e                  _set_duty_cycle
-                  0x000b48                  _configure_pins
-                  0x000bc0                  _readAnalogChannel
-                  0x000be2                  _txInt
-                  0x000ca2                  _txFloat
-                  0x000ce4                  _number
-                  0x000d18                  _txChar
-                  0x000d30                  _print_data
-                  0x000d9a                  _print_data_parsing
-                  0x000de6                  _print_header
-                  0x000e1a                  _filter_250hz
-                  0x000e7c                  _filter_10hz
-                  0x000ef6                  _filter_1hz
-                  0x000f70                  _filter_01hz
-                  0x000fea                  _SysInit
-                  0x001018                  _TaskHandler
-                  0x00106a                  _main
-                  0x001092                  __T1Interrupt
- .text            0x00127a        0x4d2 build/XC16_dsPIC30F4011/production/microGen_serial.o
-                  0x00127a                  _serialwrite
-                  0x0012ca                  _serialwritechar
-                  0x0012fa                  _manageMessage
-                  0x0013a6                  _str2float
-                  0x001412                  _float2str
-                  0x0014d4                  _float2strGain100
-                  0x001610                  _float2strGain10
-                  0x00172e                  _clearMessage
-                  0x00173a                  _sendACK
-                  0x001740                  _sendTimeout
-                  0x001746                  _sendInvalidComamnd
+.text             0x0005fc       0x1166
+ .text            0x0005fc        0xc66 build/XC16_dsPIC30F4011/production/main.o
+                  0x0005fc                  _synchronizeCommData
+                  0x000658                  _updateCommCounter
+                  0x0006a0                  _toggleCommBroadcast
+                  0x0006b4                  _toggleCommBroadcast_parsing
+                  0x0006c8                  _TaskCommBroadcast
+                  0x0006f8                  _TaskCommBroadcast_parsing
+                  0x000728                  _init_filters
+                  0x000764                  _Serial_monitor
+                  0x0008f2                  _turn_on
+                  0x00090e                  _turn_off
+                  0x000918                  _DCBUS_lock
+                  0x000942                  _run_mppt
+                  0x000b06                  _set_duty_cycle
+                  0x000b30                  _configure_pins
+                  0x000ba8                  _readAnalogChannel
+                  0x000bca                  _txInt
+                  0x000c8a                  _txFloat
+                  0x000ccc                  _number
+                  0x000d00                  _txChar
+                  0x000d18                  _print_data
+                  0x000d82                  _print_data_parsing
+                  0x000dce                  _print_header
+                  0x000e02                  _filter_250hz
+                  0x000e64                  _filter_10hz
+                  0x000ede                  _filter_1hz
+                  0x000f58                  _filter_01hz
+                  0x000fd2                  _SysInit
+                  0x001000                  _TaskHandler
+                  0x001052                  _main
+                  0x00107a                  __T1Interrupt
+ .text            0x001262        0x500 build/XC16_dsPIC30F4011/production/microGen_serial.o
+                  0x001262                  _serialwrite
+                  0x0012b2                  _serialwritechar
+                  0x0012e2                  _manageMessage
+                  0x00138a                  _str2float
+                  0x0013f6                  _float2str
+                  0x0014ea                  _float2strGain100
+                  0x001626                  _float2strGain10
+                  0x001744                  _clearMessage
+                  0x001750                  _sendACK
+                  0x001756                  _sendTimeout
+                  0x00175c                  _sendInvalidComamnd
 
-.dinit            0x00174c         0x80
- .dinit           0x00174c         0x80 data_init
+.dinit            0x001762         0x80
+ .dinit           0x001762         0x80 data_init
 
-.init.delay32     0x0017cc         0x1c
- .init.delay32    0x0017cc         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
-                  0x0017cc                  ___delay32
+.init.delay32     0x0017e2         0x1c
+ .init.delay32    0x0017e2         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
+                  0x0017e2                  ___delay32
 
-.text             0x0017e8          0xc
- .text            0x0017e8          0x6 build/XC16_dsPIC30F4011/production/system.o
-                  0x0017e8                  _ConfigureOscillator
- .text            0x0017ee          0x6 build/XC16_dsPIC30F4011/production/user.o
-                  0x0017ee                  _InitApp
-=======
-.const              0x85b8         0x60 load address 0x0005b8  
- .const             0x85b8         0x56 build/XC16_dsPIC30F4011/production/microGen_serial.o
- .const             0x860e          0xa build/XC16_dsPIC30F4011/production/main.o
-
-.text             0x000618       0x1168
- .text            0x000618        0xc66 build/XC16_dsPIC30F4011/production/main.o
-                  0x000618                  _synchronizeCommData
-                  0x000674                  _updateCommCounter
-                  0x0006bc                  _toggleCommBroadcast
-                  0x0006d0                  _toggleCommBroadcast_parsing
-                  0x0006e4                  _TaskCommBroadcast
-                  0x000714                  _TaskCommBroadcast_parsing
-                  0x000744                  _init_filters
-                  0x000780                  _Serial_monitor
-                  0x00090e                  _turn_on
-                  0x00092a                  _turn_off
-                  0x000934                  _DCBUS_lock
-                  0x00095e                  _run_mppt
-                  0x000b22                  _set_duty_cycle
-                  0x000b4c                  _configure_pins
-                  0x000bc4                  _readAnalogChannel
-                  0x000be6                  _txInt
-                  0x000ca6                  _txFloat
-                  0x000ce8                  _number
-                  0x000d1c                  _txChar
-                  0x000d34                  _print_data
-                  0x000d9e                  _print_data_parsing
-                  0x000dea                  _print_header
-                  0x000e1e                  _filter_250hz
-                  0x000e80                  _filter_10hz
-                  0x000efa                  _filter_1hz
-                  0x000f74                  _filter_01hz
-                  0x000fee                  _SysInit
-                  0x00101c                  _TaskHandler
-                  0x00106e                  _main
-                  0x001096                  __T1Interrupt
- .text            0x00127e        0x502 build/XC16_dsPIC30F4011/production/microGen_serial.o
-                  0x00127e                  _serialwrite
-                  0x0012ce                  _serialwritechar
-                  0x0012e6                  _manageMessage
-                  0x0013da                  _str2float
-                  0x001446                  _float2str
-                  0x001508                  _float2strGain100
-                  0x001644                  _float2strGain10
-                  0x001762                  _clearMessage
-                  0x00176e                  _sendACK
-                  0x001774                  _sendTimeout
-                  0x00177a                  _sendInvalidComamnd
-
-.dinit            0x001780         0x80
- .dinit           0x001780         0x80 data_init
-
-.init.delay32     0x001800         0x1c
- .init.delay32    0x001800         0x1c c:/program files (x86)/microchip/xc16/v1.31/bin/bin/../../lib\liblega-pic30-elf.a(delay32.Leo)
-                  0x001800                  ___delay32
-
-.text             0x00181c          0xc
- .text            0x00181c          0x6 build/XC16_dsPIC30F4011/production/system.o
-                  0x00181c                  _ConfigureOscillator
- .text            0x001822          0x6 build/XC16_dsPIC30F4011/production/user.o
-                  0x001822                  _InitApp
->>>>>>> wifi
+.text             0x0017fe          0xc
+ .text            0x0017fe          0x6 build/XC16_dsPIC30F4011/production/system.o
+                  0x0017fe                  _ConfigureOscillator
+ .text            0x001804          0x6 build/XC16_dsPIC30F4011/production/user.o
+                  0x001804                  _InitApp

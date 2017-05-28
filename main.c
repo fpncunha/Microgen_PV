@@ -330,14 +330,15 @@ void Serial_monitor(void) {
                 case START_MSG:
                 {
                     if (receivedByte == '{') {
-                        LATBbits.LATB6 = 1; //Debug only - Toggle B8 pin
-                        clearMessage();
+                       // LATBbits.LATB6 = 1; //Debug only - Toggle B8 pin
+                        //clearMessage();
+                        nbytes = 0;
                         Microgen_state = MSG_DATA;
                     }
                     else {
                         //do nothing;
-                        nbytes = 0;
-                        receivedMessage[nbytes] = '\0';
+                        //nbytes = 0;
+                        //receivedMessage[nbytes] = '\0';
                     }
                   //  timeoutProtocol = 0;
                 }
@@ -346,8 +347,9 @@ void Serial_monitor(void) {
                 {
                     LATBbits.LATB5 = 1; 
                     if (receivedByte == '#') {
-                        receivedMessage[nbytes] = '\0';
+                        receivedMessage[nbytes+1] = '\0';   // +1?
                         cnt = 10;
+                        toSendCRC = 0;
                         Microgen_state = CRC_DATA;
                        // timeoutProtocol = 0;
                     }
@@ -358,6 +360,7 @@ void Serial_monitor(void) {
                     else {
                         receivedMessage[nbytes] = receivedByte;
                         nbytes++; 
+                        Microgen_state = MSG_DATA;
                     }
                     LATBbits.LATB5 = 0; 
                 }
@@ -368,20 +371,20 @@ void Serial_monitor(void) {
                     if (receivedByte == '}') {
 
                         if (nbytes == toSendCRC) {
-                            receivedMessage[nbytes] = '\0';
+                           // receivedMessage[nbytes] = '\0';
                             manageMessage();
                             LATBbits.LATB6 = 0; //Debug only - Toggle B8 pin
                             Microgen_state = START_MSG;
                         } 
                         else {
-                           // strcpy(receivedMessage, "COMMERROR");
-                            //receivedMessage[strlen("COMMERROR")+1] = '\0';
+                           // strcpy(receivedMessage, "ERR");
+                            //receivedMessage[3] = '\0';
                             //manageMessage();
                             LATBbits.LATB6 = 0; //Debug only - Toggle B8 pin
                             clearMessage();
                             Microgen_state = START_MSG;
                         }
-                        timeoutProtocol = 0;
+                      //  timeoutProtocol = 0;
                     }
                     else  if (receivedByte == '#' || receivedByte == '{') {
                         clearMessage();

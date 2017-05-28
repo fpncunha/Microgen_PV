@@ -11,13 +11,8 @@
     <memory name="program">
       <units>bytes</units>
       <length>48768</length>
-<<<<<<< HEAD
-      <used>8814</used>
-      <free>39954</free>
-=======
-      <used>8892</used>
-      <free>39876</free>
->>>>>>> wifi
+      <used>8847</used>
+      <free>39921</free>
     </memory>
   </executable>
 </project>

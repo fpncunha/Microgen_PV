@@ -4,14 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "microgGen_serial.h"
+#include "microgen.h"
+
+
 _FOSC(CSW_FSCM_OFF& FRC_PLL16); // 
 _FWDT(WDT_OFF); // Watchdog off
 _FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off the power-up timers
-
-
-/************* Identificador da board (calibração) **************/
-#define BOARD_ID 11
-/****************************************************************/
 
 /***************************************/
 /************ Definitions **************/
@@ -28,18 +27,36 @@ _FBORPOR(MCLR_EN & PWRT_OFF & BORV27); // Disable MCLR reset pin aSnd turn off t
 #define DCBUS_NOK 1 //DC BUS NOT OK flag VDC < VDC_MIN || VDC > VDC_MAX
 
 
+
+//#define START_MSG 0   //first  # 
+//#define MSG_DATA  1   //second #
+//#define CRC_DATA  2   //third  #
+
+#define CRC_ERROR "CRC_ERROR"
+#define NOT_DEF   "NOT_DEF"
+#define CRC_NUM   "CRC_NUM"
+#define TIMEOUT_PROTOCOL   1500
+/***************************************/
+/***************************************/
+
+
 /*******************************************/
 /***********  Function Headers *************/
 void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void); // 1Khz interrupt
 void configure_pins();
 void set_duty_cycle(float duty);
 unsigned intreadAnalogChannel(int n);
+void txInt(unsigned int variable);
+void txFloat(float variable);
+void txChar(char caracter);
 unsigned int number(unsigned int y, unsigned int operator);
+void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
+void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
+void print_header(char* msg, int count);
 float filter_250hz(float input_value, int filter_number);
 float filter_10hz(float input_value, int filter_number);
 float filter_1hz(float input_value, int filter_number);
 float filter_01hz(float input_value, int filter_number);
-void init_filters(void);
 void run_mppt(float vfilt, float vfilt_ant, float ifilt, float ifilt_ant);
 void turn_on(void);
 void turn_off(void);
@@ -48,27 +65,16 @@ unsigned int readAnalogChannel(int channel);
 void Task_Handler(void);
 void Serial_monitor(void);
 void TaskHandler(void);
+void init_filters(void);
 void updateCommCounter(void);
 void TaskCommBroadcast(void);
 void TaskCommBroadcast_parsing(void);
 void toggleCommBroadcast(void);
 void toggleCommBroadcast_parsing(void);
-void txInt(unsigned int variable);
-void txFloat(float variable);
-void txChar(char caracter);
-void print_header(char* msg, int count);
-void print_data(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
-void print_data_parsing(float average_voltagePhotovoltaic, float average_currentPhotovoltaic, float average_PowerPhotovoltaic, float average_voltageOutput, unsigned int duty);
+void synchronizeCommData(void);
 /*******************************************/
 /*******************************************/
 
-
-        float correct_A_ipv = 0;
-        float correct_B_ipv = 0;
-        float correct_A_vpv = 0;
-        float correct_B_vpv = 0;
-        float correct_A_vdc = 0;
-        float correct_B_vdc = 0;
 
 /******************************/
 
@@ -85,6 +91,15 @@ typedef enum SystemState_t {
 /******************************/
 /******************************/
 
+/*******  STATE MACHINE *******/
+typedef enum Microgen_state_t {
+    START_MSG, //INITIAL STATE
+    MSG_DATA, //TURN OFF STATE
+    CRC_DATA, //TURN ON STATE
+    
+} Microgen_state_t;
+/******************************/
+/******************************/
 
 
 
@@ -93,6 +108,7 @@ typedef enum SystemState_t {
 float duty = 0; //Duty cycle initialization
 int mppt_counter = 0; //MPPT counter initialization
 int comm_counter = 0; //USART broadcast counter initialization (1s)
+int sync_counter = 0; //microgen sync counter initialization (1s)
 int DCBUS_flag = DCBUS_NOK;
 int unlock_count = 0;
 int serial_com = 1;
@@ -102,11 +118,16 @@ volatile SystemState_t System_state = STATE_INITIAL;
 int taskHander_runflag = 0; //taskHander flag - synchronize state machine with the main 1kHz interrupt
 int taskCommBroadcast_runflag = 0; //broadcast to USART
 int taskCommBroadcast_parsing_runflag = 0;
+int timeoutProtocol = 0;
+volatile Microgen_state_t Microgen_state = START_MSG;
+
 float v0, v1, v2, analog_voltagePhotovoltaic, analog_currentPhotovoltaic, analog_voltageOutput;
 float voltagePhotovoltaic, currentPhotovoltaic, voltageOutput, PowerPV;
 long clockFrequency = 30000000; // 30MHz serial_cmd clock
 /********************************************/
 /********************************************/
+
+
 
 /******************************************/
 /********** Filters' variables ************/
@@ -156,7 +177,24 @@ char Message8[] = "\n ***System OFF*** \n";
 char MessageX[] = "\nDUTY";
 int n;
 /*******************************************/
+/************* protocol ********************/
+//extern char receivedMessage[100];
+//boolean status_command;
+//extern int STATE_cardinal = 0;
+//extern int toSendCRC = 0, nbytes = 0, cnt = 0;
 /*******************************************/
+
+/*******************************************/
+void synchronizeCommData(void) {
+    float powerPV;
+    pv2rpi_.DCBUS = (int) (10 * voltageDCBUS_filtered_10Hz);
+    pv2rpi_.VPV = (int) (10 * voltagePV_filtered_10Hz);
+    pv2rpi_.IPV = (int) (10 * currentPV_filtered_10Hz);
+    powerPV = voltagePV_filtered_10Hz * currentPV_filtered_10Hz;
+    pv2rpi_.PWR = (int) (10 * powerPV);
+
+    //print_data_parsing(voltagePV_filtered_10Hz, currentPV_filtered_10Hz, powerPV_filtered_01Hz, voltageDCBUS_filtered_10Hz, PDC1);
+}
 
 void updateCommCounter(void) {
     if (comm_counter >= 1000 && toggle_broadcast_aux == 1) {
@@ -165,10 +203,18 @@ void updateCommCounter(void) {
     } else if (comm_counter >= 1000 && toggle_broadcast_parsing_aux == 1) {
         TaskCommBroadcast_parsing();
         comm_counter = 0;
-    }
-    else {
+    } else {
         comm_counter += 1;
     }
+
+    if (sync_counter >= 1000) {
+        sync_counter = 0;
+        synchronizeCommData();
+    } else {
+        sync_counter += 1;
+    }
+
+
 }
 
 void toggleCommBroadcast(void) {
@@ -211,16 +257,21 @@ void init_filters(void) {
 void Serial_monitor(void) {
 
     int y = 0;
+    
+    char receivedByte = 0;
+    int i = 0;
 
     if (U2STAbits.URXDA == 1) { //Checks if received a character
-        y = U2RXREG; //Y = received character
-        if (y == '1' && DCBUS_flag == DCBUS_OK) {
-            toggle_broadcast_parsing_aux = 0;
-            toggle_broadcast_aux = 0;
-            serial_com = 1;
-            System_state = STATE_ON;
-            //taskHander_runflag = 1;
-        }
+
+        if (commStatus == PROTOCOL_DIS) {
+            y = U2RXREG; //Y = received character
+            if (y == '1' && DCBUS_flag == DCBUS_OK) {
+                toggle_broadcast_parsing_aux = 0;
+                toggle_broadcast_aux = 0;
+                serial_com = 1;
+                System_state = STATE_ON;
+                //taskHander_runflag = 1;
+            }
 
             if (y == '1' && DCBUS_flag == DCBUS_NOK) {
                 toggle_broadcast_parsing_aux = 0;
@@ -250,7 +301,126 @@ void Serial_monitor(void) {
                 toggle_broadcast_aux = 0;
                 toggleCommBroadcast_parsing();
 
+            }
+            if (y == 'p' || y == 'P') {
+                commStatus = PROTOCOL_ENA;
+                toggle_broadcast_parsing_aux = 0;
+                toggle_broadcast_aux = 0;
+            }
+        }//*** end of protocol DISABLE***///
+        else {
+            //////////////////////////////////////////////////
+            /////////////   MICROGEN  SERIAL PROTOCOL    /////
+            
+            
+            receivedByte =  U2RXREG;
+            //receivedMessage[nbytes] = U2RXREG;
+           /* if (timeoutProtocol > TIMEOUT_PROTOCOL) {
+                timeoutProtocol = 0;
+                clearMessage();
+                nbytes = 0;
+                Microgen_state = START_MSG;
+                LATBbits.LATB4 = 1;
+                for (i = 0; i < 500; i++)
+                    asm volatile("nop");
+                LATBbits.LATB4 = 0;
+            }*/
+            
+            switch (Microgen_state) {
+                case START_MSG:
+                {
+                    if (receivedByte == '{') {
+                       // LATBbits.LATB6 = 1; //Debug only - Toggle B8 pin
+                        //clearMessage();
+                        nbytes = 0;
+                        Microgen_state = MSG_DATA;
+                    }
+                    else {
+                        //do nothing;
+                        //nbytes = 0;
+                        //receivedMessage[nbytes] = '\0';
+                    }
+                  //  timeoutProtocol = 0;
+                }
+                    break;
+                case MSG_DATA:
+                {
+                    LATBbits.LATB5 = 1; 
+                    if (receivedByte == '#') {
+                        receivedMessage[nbytes+1] = '\0';   // +1?
+                        cnt = 10;
+                        toSendCRC = 0;
+                        Microgen_state = CRC_DATA;
+                       // timeoutProtocol = 0;
+                    }
+                    else  if (receivedByte == '{' || receivedByte == '}') {
+                        clearMessage();
+                        Microgen_state = START_MSG;
+                    }
+                    else {
+                        receivedMessage[nbytes] = receivedByte;
+                        nbytes++; 
+                        Microgen_state = MSG_DATA;
+                    }
+                    LATBbits.LATB5 = 0; 
+                }
+                    break;
+                case CRC_DATA:
+                {
+                    LATBbits.LATB4 = 1; 
+                    if (receivedByte == '}') {
+
+                        if (nbytes == toSendCRC) {
+                           // receivedMessage[nbytes] = '\0';
+                            manageMessage();
+                            LATBbits.LATB6 = 0; //Debug only - Toggle B8 pin
+                            Microgen_state = START_MSG;
+                        } 
+                        else {
+                           // strcpy(receivedMessage, "ERR");
+                            //receivedMessage[3] = '\0';
+                            //manageMessage();
+                            LATBbits.LATB6 = 0; //Debug only - Toggle B8 pin
+                            clearMessage();
+                            Microgen_state = START_MSG;
+                        }
+                      //  timeoutProtocol = 0;
+                    }
+                    else  if (receivedByte == '#' || receivedByte == '{') {
+                        clearMessage();
+                        Microgen_state = START_MSG;
+                    }
+                    else {
+                        toSendCRC += (receivedByte - 48) * cnt;
+                        if (cnt < 1) {
+                            clearMessage();
+                            Microgen_state = START_MSG;
+                        }
+                        cnt /= 10; 
+                    }
+                    LATBbits.LATB4 = 0; 
+                }
+                    break;
+
+                default:
+                    break;
+            }
+            
+           
+             //////////////////////////////////////////////////
+            //////   END of MICROGEN  SERIAL PROTOCOL    /////
+            
         }
+        
+       /* if (timeoutProtocol > TIMEOUT_PROTOCOL) {
+            LATBbits.LATB5 = 1; //Debug only - Toggle B8 pin
+            timeoutProtocol = 0;
+            clearMessage();
+            Microgen_state = START_MSG;
+            LATBbits.LATB5 = 0; //Debug only - Toggle B8 pin
+        }
+        */ 
+
     }
 }
 
@@ -628,136 +798,19 @@ void TaskHandler(void) {
 }
 
 int main() {
-    //////////////////// TEMPORÁRIO  /////////////////////////////
-    
-    if (BOARD_ID == 0){
-        correct_A_ipv = 1;  //ganho
-        correct_B_ipv = 0;  //offset
-        correct_A_vpv = 1;
-        correct_B_vpv = 0;
-        correct_A_vdc = 1;
-        correct_B_vdc = 0;
-    }
-    else if (BOARD_ID == 1){
-        correct_A_ipv = 1.0132;
-        correct_B_ipv = 0.1914;
-        correct_A_vpv = 1.1226;
-        correct_B_vpv = 0.6728;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-    else if (BOARD_ID == 2){
-        correct_A_ipv = 1.0169;
-        correct_B_ipv = 0.1851;
-        correct_A_vpv = 1.1276;
-        correct_B_vpv = 0.6252;
-        correct_A_vdc = 1.039;
-        correct_B_vdc = 5.2055;
-    }
-
-    else if (BOARD_ID == 3){
-        correct_A_ipv = 1.0044;
-        correct_B_ipv = 0.2135;
-        correct_A_vpv = 1.1074;
-        correct_B_vpv = 0.5923;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-    else if (BOARD_ID == 4){
-        correct_A_ipv = 1.0008;
-        correct_B_ipv = 0.1616;
-        correct_A_vpv = 1.1079;
-        correct_B_vpv = 0.7322;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-    else if (BOARD_ID == 5){
-        correct_A_ipv = 1.0059;
-        correct_B_ipv = 0.2624;
-        correct_A_vpv = 1.103;
-        correct_B_vpv = 0.7659;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-    else if (BOARD_ID == 6){
-        correct_A_ipv = 0.9974;
-        correct_B_ipv = 0.2026;
-        correct_A_vpv = 1.0972;
-        correct_B_vpv = 0.4841;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-    else if (BOARD_ID == 7){
-        correct_A_ipv = 1.0054;
-        correct_B_ipv = 0.2489;
-        correct_A_vpv = 1.1197;
-        correct_B_vpv = 0.7684;
-        correct_A_vdc = 1.0256;
-        correct_B_vdc = 6.5139;
-    }
-    else if (BOARD_ID == 8){
-        correct_A_ipv = 1.0052;
-        correct_B_ipv = 0.1709;
-        correct_A_vpv = 1.0996;
-        correct_B_vpv = 0.5027;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-    else if (BOARD_ID == 9){
-        correct_A_ipv = 1.0019;
-        correct_B_ipv = 0.2251;
-        correct_A_vpv = 1.11;
-        correct_B_vpv = 0.7743;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-    else if (BOARD_ID == 10){
-        correct_A_ipv = 1.0143;
-        correct_B_ipv = 0.2038;
-        correct_A_vpv = 1.1258;
-        correct_B_vpv = 0.5668;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-    else if (BOARD_ID == 11){
-        correct_A_ipv = 1.0241;  //ganho
-        correct_B_ipv = 0.3252;  //offset
-        correct_A_vpv = 1.1287;
-        correct_B_vpv = 0.5188;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-    else if (BOARD_ID == 12){
-        correct_A_ipv = 1.0188;  //ganho
-        correct_B_ipv = 0.228;  //offset
-        correct_A_vpv = 1.1224;
-        correct_B_vpv = 0.7298;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-    else if (BOARD_ID == 13){
-        correct_A_ipv = 1.0254;  //ganho
-        correct_B_ipv = 0.2811;  //offset
-        correct_A_vpv = 1;
-        correct_B_vpv = 0;
-        correct_A_vdc = 1.0368;
-        correct_B_vdc = 5.5674;
-    }
-
-//////////////////// TEMPORARIO /////////////////
     TRISD = 0b11111100; //RD0 and RD1 output, RD2 to RD8 input
     _LATD1 = 1;
-    LATBbits.LATB8 = 1;
+    //LATBbits.LATB8 = 1;
     
     set_duty_cycle(0);
 
     configure_pins(); 
+    
+    TRISBbits.TRISB8 = 0;   //pin 10 output
+    TRISBbits.TRISB7 = 0;   //pin 9 output
+    TRISBbits.TRISB6 = 0;   //pin 8 output
+    TRISBbits.TRISB5 = 0;   //pin 9 output
+    TRISBbits.TRISB4 = 0;   //pin 8 output
     init_filters();
 
     while (1) {
@@ -784,28 +837,21 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
     //Reads de current from the PV panel (IPV)
     analog_currentPhotovoltaic = readAnalogChannel(0);
     v0 = (analog_currentPhotovoltaic * AD_FS) / AD16Bit_FS;
-	currentPhotovoltaic = (v0 * HY15P_IN) / HY15P_VN;
-	currentPhotovoltaic /= correct_A_ipv;
-    currentPhotovoltaic += correct_B_ipv;
-            //(currentPhotovoltaic * correct_A_ipv + correct_B_ipv);
-   // currentPhotovoltaic = (v0 * HY15P_IN)/(HY15P_VN * correct_A_ipv) + correct_B_ipv;
-
+    currentPhotovoltaic = (v0 * HY15P_IN) / HY15P_VN;
+    currentPhotovoltaic = (currentPhotovoltaic * 1.0125 + 0.24); //correc��o do ADC com base em ensaios em pot�ncia
     //Reads the voltage from de photovoltaic panel (VPV)
 
     analog_voltagePhotovoltaic = readAnalogChannel(1);
     v1 = (analog_voltagePhotovoltaic * AD_FS) / AD16Bit_FS;
- 	voltagePhotovoltaic = v1 * AT_PV;
-	voltagePhotovoltaic /= correct_A_vpv;
-    voltagePhotovoltaic += correct_B_vpv;
-  // voltagePhotovoltaic = (voltagePhotovoltaic / (correct_A_vpv)) + correct_B_vpv;
 
+    voltagePhotovoltaic = v1 * AT_PV;
+    voltagePhotovoltaic = (voltagePhotovoltaic * 0.8912 + 0.63); //correc��o do ADC com base em ensaio de fonte de tens�o
     // Reads the output voltage (VDC)
     analog_voltageOutput = readAnalogChannel(2);
     v2 = (analog_voltageOutput * AD_FS) / AD16Bit_FS;
-	voltageOutput = v2 * AT_VDC;
-    voltageOutput /= correct_A_vdc;
-    voltageOutput += correct_B_vdc;
-  //  voltageOutput = (voltageOutput / correct_A_vdc) +  correct_B_vdc;
+    voltageOutput = v2 * AT_VDC;
+    voltageOutput = (voltageOutput * 0.981 + 5.89); //correc��o do ADC com base em ensaio de fonte de tens�o
+
 
     PowerPV = currentPhotovoltaic * voltagePhotovoltaic;
 
@@ -856,6 +902,7 @@ void __attribute__((__interrupt__, __auto_psv__)) _T1Interrupt(void) {
 
     updateCommCounter();
     taskHander_runflag = 1;
+    timeoutProtocol += 1;
 
-    //LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
+    LATBbits.LATB8 = 0; //Debug only - Toggle B8 pin
 }
